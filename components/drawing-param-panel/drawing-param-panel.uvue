@@ -1,0 +1,82 @@
+<template>
+	<view class="param-panel-container">
+		<!-- 矩形房间参数面板 -->
+		<view v-if="shapeType === 'rect'" class="glass-card-form param-card">
+			<view class="form-cell">
+				<text class="form-cell-label">长度 (m)</text>
+				<view class="form-cell-input-wrapper">
+					<input 
+						class="form-cell-input" 
+						type="number" 
+						:value="rectW" 
+						@input="onRectWInput" 
+						placeholder="请输入长度"
+					/>
+				</view>
+			</view>
+			<view class="form-cell form-cell-no-border">
+				<text class="form-cell-label">宽度 (m)</text>
+				<view class="form-cell-input-wrapper">
+					<input 
+						class="form-cell-input" 
+						type="number" 
+						:value="rectH" 
+						@input="onRectHInput" 
+						placeholder="请输入宽度"
+					/>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { PropType } from 'vue'
+
+const props = defineProps({
+	shapeType: {
+		type: String,
+		required: true
+	},
+	rectW: {
+		type: Number,
+		default: 8.0
+	},
+	rectH: {
+		type: Number,
+		default: 6.0
+	}
+})
+
+const emit = defineEmits(['update:rectW', 'update:rectH'])
+
+const onRectWInput = (e: InputEvent) => {
+	const val = parseFloat(e.detail.value)
+	if (!isNaN(val)) {
+		emit('update:rectW', val)
+	}
+}
+
+const onRectHInput = (e: InputEvent) => {
+	const val = parseFloat(e.detail.value)
+	if (!isNaN(val)) {
+		emit('update:rectH', val)
+	}
+}
+</script>
+
+<style lang="scss">
+.param-panel-container {
+	width: 100%;
+	margin-top: 16px;
+}
+
+.param-card {
+	flex-direction: column;
+}
+
+/* 覆盖公共类，使输入框内容右对齐 */
+.form-cell-input {
+	text-align: right;
+}
+</style>

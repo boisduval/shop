@@ -39,7 +39,7 @@
 	// #endif
 </script>
 
-<style>
+<style lang="scss">
 	/*每个页面公共css */
 	.uni-row {
 		flex-direction: row;
@@ -47,5 +47,80 @@
 
 	.uni-column {
 		flex-direction: column;
+	}
+
+	/* 公共表单类 (Vant 风格) */
+	.glass-card-form {
+		background-color: rgba(255, 255, 255, 0.3);
+		backdrop-filter: blur(10px);
+		border-radius: 12px;
+		border: 1px solid rgba(226, 232, 240, 0.5);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+		padding: 0 16px;
+	}
+
+	.form-cell {
+		padding-top: 10px;
+		padding-bottom: 10px;
+		border-bottom: 1px solid #ebedf0;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.form-cell-no-border {
+		border-bottom: none !important;
+	}
+
+	.form-cell-label {
+		font-size: 14px;
+		color: $uni-text-color;
+		width: 96px;
+		margin-right: 12px;
+	}
+
+	.form-cell-input-wrapper {
+		position: relative;
+		flex-direction: row;
+		align-items: center;
+		flex: 1;
+	}
+
+	.form-cell-input {
+		flex: 1;
+		height: 36px;
+		background-color: transparent;
+		border: none;
+		padding-left: 0;
+		padding-right: 0;
+		font-size: 14px;
+		color: #323233;
+	}
+
+	.form-cell-textarea {
+		flex: 1;
+		height: 80px;
+		background-color: transparent;
+		border: none;
+		padding-left: 0;
+		padding-right: 0;
+		padding-top: 6px;
+		padding-bottom: 6px;
+		font-size: 14px;
+		color: #323233;
+	}
+
+	.form-cell-suffix {
+		position: absolute;
+		right: 0;
+		font-size: 14px;
+		color: #969799;
+	}
+
+	.form-cell-arrow {
+		position: absolute;
+		right: 0;
+		justify-content: center;
+		align-items: center;
 	}
 </style>

@@ -34,6 +34,11 @@
 							<text class="placeholder-subtext">后续在此处集成平面图绘制组件</text>
 						</view>
 					</view>
+					<drawing-param-panel
+						:shape-type="selectedShape"
+						v-model:rectW="rectW"
+						v-model:rectH="rectH"
+					></drawing-param-panel>
 				</view>
 
 				<!-- 步骤 2：填写表单 -->
@@ -60,6 +65,8 @@
 	const selectedTemplateId = ref(templatesList[0].id)
 	const selectedShape = ref('rect')
 	const selectedCabinetStyle = ref('default')
+	const rectW = ref(8.0)
+	const rectH = ref(6.0)
 
 	// 计算选中的模板名称
 	const selectedTemplateName = computed((): string => {

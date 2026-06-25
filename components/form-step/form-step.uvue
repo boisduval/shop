@@ -10,28 +10,28 @@
 			<text class="helper-text">请完善核查表单</text>
 		</view>
 
-		<view class="glass-card form-card">
+		<view class="glass-card-form form-card">
 			<!-- 动态渲染表单字段 -->
 			<view class="form-container">
 				<view 
 					v-for="(field, index) in fields" 
 					:key="field.key" 
-					class="form-item"
-					:class="index === fields.length - 1 ? 'no-border' : ''"
+					class="form-cell"
+					:class="index === fields.length - 1 ? 'form-cell-no-border' : ''"
 				>
-					<text class="form-label">{{ field.label }}</text>
-					<view class="input-container">
+					<text class="form-cell-label">{{ field.label }}</text>
+					<view class="form-cell-input-wrapper">
 						<textarea 
 							v-if="field.type === 'textarea'"
-							class="form-textarea" 
+							class="form-cell-textarea" 
 							v-model="formData[field.key]" 
 							:placeholder="field.placeholder || '请输入'"
 							@input="onInput"
 						/>
-						<view v-else class="input-wrapper">
+						<view v-else class="form-cell-input-wrapper">
 							<!-- 如果包含 date 字段，自动应用 readonly (disabled) -->
 							<input 
-								class="form-input" 
+								class="form-cell-input" 
 								:type="field.type === 'number' ? 'number' : 'text'"
 								v-model="formData[field.key]" 
 								:placeholder="field.placeholder || '请输入'"
@@ -40,10 +40,10 @@
 							/>
 							
 							<!-- 后缀插槽 -->
-							<text v-if="field.suffix" class="input-suffix">{{ field.suffix }}</text>
+							<text v-if="field.suffix" class="form-cell-suffix">{{ field.suffix }}</text>
 							
 							<!-- 日期字段的跳转箭头 -->
-							<view v-if="field.key === 'date'" class="date-arrow-wrapper">
+							<view v-if="field.key === 'date'" class="form-cell-arrow">
 								<uni-icons type="right" size="14" color="#94a3b8"></uni-icons>
 							</view>
 						</view>
@@ -199,15 +199,6 @@ const onInput = () => {
 	font-weight: 400;
 }
 
-.glass-card {
-	background-color: rgba(255, 255, 255, 0.3);
-	backdrop-filter: blur(10px);
-	border-radius: 12px;
-	border: 1px solid rgba(226, 232, 240, 0.5);
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
-	padding: 16px;
-}
-
 .form-card {
 	margin-bottom: 16px;
 }
@@ -216,79 +207,24 @@ const onInput = () => {
 	flex-direction: column;
 }
 
-.form-item {
-	padding-top: 10px;
-	padding-bottom: 10px;
-	border-bottom: 1px solid #ebedf0;
-	flex-direction: row;
-	align-items: center;
-}
-
-.no-border {
-	border-bottom: none;
-}
-
-.form-label {
-	font-size: 14px;
-	color: $uni-text-color;
-	width: 96px;
-	margin-right: 12px;
-}
-
-.input-container {
-	position: relative;
-	flex-direction: row;
-	flex: 1;
-}
-
-.input-wrapper {
-	position: relative;
-	flex-direction: row;
-	align-items: center;
-	flex: 1;
-}
-
-.form-input {
-	flex: 1;
-	height: 36px;
-	background-color: transparent;
-	border: none;
-	padding-left: 0;
+/* 覆盖公共类，针对填写表单组件需要留出 input 后缀间距 */
+.form-cell-input {
 	padding-right: 28px;
-	font-size: 14px;
-	color: #323233;
-}
-
-.form-textarea {
-	flex: 1;
-	height: 80px;
-	background-color: transparent;
-	border: none;
-	padding-left: 0;
-	padding-right: 0;
-	padding-top: 6px;
-	padding-bottom: 6px;
-	font-size: 14px;
-	color: #323233;
-}
-
-.input-suffix {
-	position: absolute;
-	right: 0;
-	font-size: 14px;
-	color: #969799;
-}
-
-.date-arrow-wrapper {
-	position: absolute;
-	right: 0;
-	justify-content: center;
-	align-items: center;
 }
 
 .section-space {
 	margin-top: 12px;
 	flex-direction: column;
+}
+
+/* 本地特定预览卡片样式，无需提取至全局 */
+.glass-card {
+	background-color: rgba(255, 255, 255, 0.3);
+	backdrop-filter: blur(10px);
+	border-radius: 12px;
+	border: 1px solid rgba(226, 232, 240, 0.5);
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+	padding: 16px;
 }
 
 .preview-card {
