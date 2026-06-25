@@ -4,7 +4,7 @@
 			:class="modelValue === item.id ? 'active-ring' : ''" @click="onSelect(item.id)">
 			<!-- Top info row -->
 			<view class="template-card-top">
-				<uni-icons v-if="modelValue === item.id" type="checkbox-filled" size="20" color="#3b66f5" />
+				<uni-icons v-if="modelValue === item.id" type="checkbox-filled" size="24" color="#3b66f5" />
 				<view v-else class="checkbox-placeholder"></view>
 			</view>
 
@@ -53,7 +53,7 @@
 	.template-card {
 		width: 48%;
 		height: 96px;
-		padding: 12px 20px 16px;
+		padding: 12px 20px;
 		margin-bottom: 24px;
 		justify-content: space-between;
 		border-radius: 12px;
@@ -77,13 +77,13 @@
 	}
 
 	.template-card-top {
-		align-items: flex-end;
-		height: 20px;
+		align-items: flex-start;
+		height: 24px;
 	}
 
 	.checkbox-placeholder {
-		width: 20px;
-		height: 20px;
+		width: 24px;
+		height: 24px;
 	}
 
 	.template-card-bottom {
