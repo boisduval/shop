@@ -5,78 +5,179 @@
 			<view class="form-cell">
 				<text class="form-cell-label">长度 (m)</text>
 				<view class="form-cell-input-wrapper">
-					<input 
-						class="form-cell-input" 
-						type="number" 
-						:value="rectW" 
-						@input="onRectWInput" 
-						placeholder="请输入长度"
-					/>
+					<input class="form-cell-input" type="number" :value="rectW" @input="onRectWInput"
+						placeholder="请输入长度" />
 				</view>
 			</view>
 			<view class="form-cell form-cell-no-border">
 				<text class="form-cell-label">宽度 (m)</text>
 				<view class="form-cell-input-wrapper">
-					<input 
-						class="form-cell-input" 
-						type="number" 
-						:value="rectH" 
-						@input="onRectHInput" 
-						placeholder="请输入宽度"
-					/>
+					<input class="form-cell-input" type="number" :value="rectH" @input="onRectHInput"
+						placeholder="请输入宽度" />
 				</view>
 			</view>
+		</view>
+
+		<!-- 梯形房间参数面板 -->
+		<view v-if="shapeType === 'trap'" class="param-group">
+			<!-- 位置调节滑块 (Slider) (独立于输入卡片) -->
+			<view class="slider-container mb-4">
+				<text class="slider-label">位置调节</text>
+				<view class="slider-wrapper">
+					<slider :value="trapOffset" :min="-100" :max="100" active-color="#3B66F5" background-color="#e2e8f0"
+						block-size="18" @change="onSliderChange" />
+				</view>
+			</view>
+			<view class="glass-card-form param-card">
+				<view class="form-cell">
+					<text class="form-cell-label">上边长 (m)</text>
+					<view class="form-cell-input-wrapper">
+						<input class="form-cell-input" type="number" :value="trapTop" @input="onTrapTopInput"
+							placeholder="请输入上边长" />
+					</view>
+				</view>
+				<view class="form-cell">
+					<text class="form-cell-label">下边长 (m)</text>
+					<view class="form-cell-input-wrapper">
+						<input class="form-cell-input" type="number" :value="trapBottom" @input="onTrapBottomInput"
+							placeholder="请输入下边长" />
+					</view>
+				</view>
+				<view class="form-cell form-cell-no-border">
+					<text class="form-cell-label">高度 (m)</text>
+					<view class="form-cell-input-wrapper">
+						<input class="form-cell-input" type="number" :value="trapH" @input="onTrapHInput"
+							placeholder="请输入高度" />
+					</view>
+				</view>
+			</view>
+
+
 		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
-import { PropType } from 'vue'
+	import { PropType } from 'vue'
 
-const props = defineProps({
-	shapeType: {
-		type: String,
-		required: true
-	},
-	rectW: {
-		type: Number,
-		default: 8.0
-	},
-	rectH: {
-		type: Number,
-		default: 6.0
+	const props = defineProps({
+		shapeType: {
+			type: String,
+			required: true
+		},
+		rectW: {
+			type: Number,
+			default: 40
+		},
+		rectH: {
+			type: Number,
+			default: 30
+		},
+		trapTop: {
+			type: Number,
+			default: 30
+		},
+		trapBottom: {
+			type: Number,
+			default: 50
+		},
+		trapH: {
+			type: Number,
+			default: 30
+		},
+		trapOffset: {
+			type: Number,
+			default: 0
+		}
+	})
+
+	const emit = defineEmits([
+		'update:rectW',
+		'update:rectH',
+		'update:trapTop',
+		'update:trapBottom',
+		'update:trapH',
+		'update:trapOffset'
+	])
+
+	const onRectWInput = (e : InputEvent) => {
+		const val = parseFloat(e.detail.value)
+		if (!isNaN(val)) {
+			emit('update:rectW', val)
+		}
 	}
-})
 
-const emit = defineEmits(['update:rectW', 'update:rectH'])
-
-const onRectWInput = (e: InputEvent) => {
-	const val = parseFloat(e.detail.value)
-	if (!isNaN(val)) {
-		emit('update:rectW', val)
+	const onRectHInput = (e : InputEvent) => {
+		const val = parseFloat(e.detail.value)
+		if (!isNaN(val)) {
+			emit('update:rectH', val)
+		}
 	}
-}
 
-const onRectHInput = (e: InputEvent) => {
-	const val = parseFloat(e.detail.value)
-	if (!isNaN(val)) {
-		emit('update:rectH', val)
+	const onTrapTopInput = (e : InputEvent) => {
+		const val = parseFloat(e.detail.value)
+		if (!isNaN(val)) {
+			emit('update:trapTop', val)
+		}
 	}
-}
+
+	const onTrapBottomInput = (e : InputEvent) => {
+		const val = parseFloat(e.detail.value)
+		if (!isNaN(val)) {
+			emit('update:trapBottom', val)
+		}
+	}
+
+	const onTrapHInput = (e : InputEvent) => {
+		const val = parseFloat(e.detail.value)
+		if (!isNaN(val)) {
+			emit('update:trapH', val)
+		}
+	}
+
+	const onSliderChange = (e : UniSliderChangeEvent) => {
+		emit('update:trapOffset', e.detail.value)
+	}
 </script>
 
 <style lang="scss">
-.param-panel-container {
-	width: 100%;
-	margin-top: 16px;
-}
+	.param-panel-container {
+		width: 100%;
+		margin-top: 16px;
+	}
 
-.param-card {
-	flex-direction: column;
-}
+	.param-group {
+		flex-direction: column;
+		width: 100%;
+	}
 
-/* 覆盖公共类，使输入框内容右对齐 */
-.form-cell-input {
-	text-align: right;
-}
+	.param-card {
+		flex-direction: column;
+	}
+
+	/* 覆盖公共类，使输入框内容右对齐 */
+	.form-cell-input {
+		text-align: right;
+	}
+
+	.slider-container {
+		flex-direction: row;
+		align-items: center;
+		width: 100%;
+		padding: 0 4px;
+	}
+
+	.slider-label {
+		font-size: 12px;
+		color: #94a3b8;
+		margin-right: 12px;
+	}
+
+	.slider-wrapper {
+		flex: 1;
+	}
+
+	.mb-4 {
+		margin-bottom: 16px;
+	}
 </style>

@@ -38,6 +38,10 @@
 						:shape-type="selectedShape"
 						v-model:rectW="rectW"
 						v-model:rectH="rectH"
+						v-model:trapTop="trapTop"
+						v-model:trapBottom="trapBottom"
+						v-model:trapH="trapH"
+						v-model:trapOffset="trapOffset"
 					></drawing-param-panel>
 				</view>
 
@@ -65,8 +69,12 @@
 	const selectedTemplateId = ref(templatesList[0].id)
 	const selectedShape = ref('rect')
 	const selectedCabinetStyle = ref('default')
-	const rectW = ref(8.0)
-	const rectH = ref(6.0)
+	const rectW = ref(40)
+	const rectH = ref(30)
+	const trapTop = ref(30)
+	const trapBottom = ref(50)
+	const trapH = ref(30)
+	const trapOffset = ref(0)
 
 	// 计算选中的模板名称
 	const selectedTemplateName = computed((): string => {
