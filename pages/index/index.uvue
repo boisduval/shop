@@ -20,10 +20,14 @@
 
 				<!-- 步骤 1：绘制平面图 -->
 				<view v-show="activeStep === 1" class="step-content">
-					<view class="card">
+					<view class="selector-wrapper">
+						<room-shape-selector v-model="selectedShape"></room-shape-selector>
+					</view>
+					<view class="card mt-4">
 						<text class="card-title">绘制空间平面设计</text>
 						<view class="canvas-placeholder">
 							<text class="placeholder-text">【平面图绘制画布占位】</text>
+							<text class="placeholder-subtext">当前选择形状：{{ selectedShape }}</text>
 							<text class="placeholder-subtext">后续在此处集成平面图绘制组件</text>
 						</view>
 					</view>
@@ -51,6 +55,7 @@
 	const steps = ['选择模板', '绘制平面图', '填写表单']
 	const activeStep = ref(0)
 	const selectedTemplateId = ref(templatesList[0].id)
+	const selectedShape = ref('rect')
 
 	// 计算选中的模板名称
 	const selectedTemplateName = computed((): string => {
@@ -179,5 +184,12 @@
 		color: #8c8c8c;
 	}
 
+	.selector-wrapper {
+		margin-bottom: 12px;
+		width: 100%;
+	}
 
+	.mt-4 {
+		margin-top: 16px;
+	}
 </style>

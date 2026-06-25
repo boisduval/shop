@@ -1,0 +1,151 @@
+<template>
+	<view class="shape-selector-container">
+		<view v-for="item in options" :key="item.value" class="shape-card"
+			:class="modelValue === item.value ? 'shape-card-active' : ''" @click="selectShape(item.value)">
+			<!-- SVG Icon (Using Image tag for uni-app x cross-platform support) -->
+			<view class="icon-wrapper">
+				<image class="shape-icon" :class="modelValue === item.value ? 'scale-110' : ''"
+					:src="modelValue === item.value ? item.iconSelected : item.iconUnselected"></image>
+			</view>
+
+			<!-- Titles -->
+			<view class="text-wrapper">
+				<text class="title-text" :class="modelValue === item.value ? 'text-active' : ''">{{ item.title }}</text>
+				<text class="sub-text">{{ item.sub }}</text>
+			</view>
+
+			<!-- Bottom active indicator line -->
+			<view v-if="modelValue === item.value" class="active-indicator"></view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { PropType } from 'vue'
+
+	export interface ShapeOption {
+		title : string
+		sub : string
+		value : string
+		iconUnselected : string
+		iconSelected : string
+	}
+
+	defineProps({
+		modelValue: {
+			type: String,
+			required: true
+		}
+	})
+
+	const emit = defineEmits(['update:modelValue'])
+
+	const options : ShapeOption[] = [
+		{
+			title: '矩形房间',
+			sub: '标准方形',
+			value: 'rect',
+			iconUnselected: '/static/rect-unselected.svg',
+			iconSelected: '/static/rect-selected.svg'
+		},
+		{
+			title: '梯形房间',
+			sub: '规则异形',
+			value: 'trap',
+			iconUnselected: '/static/trap-unselected.svg',
+			iconSelected: '/static/trap-selected.svg'
+		},
+		{
+			title: '自由绘制',
+			sub: '多边形',
+			value: 'free',
+			iconUnselected: '/static/free-unselected.svg',
+			iconSelected: '/static/free-selected.svg'
+		}
+	]
+
+	const selectShape = (value : string) => {
+		emit('update:modelValue', value)
+	}
+</script>
+
+<style>
+	.shape-selector-container {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		background-color: rgba(241, 245, 249, 0.5);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(226, 232, 240, 0.2);
+		border-radius: 16px;
+		padding: 6px;
+		box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+		width: 100%;
+	}
+
+	.shape-card {
+		flex: 1;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 84px;
+		border-radius: 12px;
+		transition: all 0.3s;
+		background-color: transparent;
+		position: relative;
+	}
+
+	.shape-card:active {
+		transform: scale(0.95);
+	}
+
+	.shape-card-active {
+		background-color: #ffffff;
+		box-shadow: 0 4px 6px -1px rgba(226, 232, 240, 0.8), 0 2px 4px -1px rgba(226, 232, 240, 0.8);
+		transform: scale(1.02);
+	}
+
+	.icon-wrapper {
+		margin-bottom: 4px;
+	}
+
+	.shape-icon {
+		width: 20px;
+		height: 20px;
+		transition: all 0.3s;
+	}
+
+	.scale-110 {
+		transform: scale(1.1);
+	}
+
+	.text-wrapper {
+		align-items: center;
+	}
+
+	.title-text {
+		font-size: 12px;
+		color: #64748b;
+		font-weight: 500;
+	}
+
+	.text-active {
+		color: #3B66F5;
+		font-weight: bold;
+	}
+
+	.sub-text {
+		font-size: 9px;
+		color: #94a3b8;
+		margin-top: 1px;
+	}
+
+	.active-indicator {
+		border-radius: 9999px;
+		background-color: #3B66F5;
+		height: 4px;
+		width: 14px;
+		bottom: 4px;
+		position: absolute;
+	}
+</style>
