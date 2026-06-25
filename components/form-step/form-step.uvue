@@ -62,7 +62,7 @@
 				<text class="helper-text">绘制生成的平面草图预览</text>
 			</view>
 
-			<view class="glass-card preview-card">
+			<view class="preview-container preview-container-readonly grid-bg">
 				<!-- 有图状态 -->
 				<view v-if="drawingImage !== ''" class="preview-image-wrapper">
 					<image class="preview-image" :src="drawingImage" mode="aspectFit"></image>
@@ -79,6 +79,7 @@
 
 <script setup lang="uts">
 import { computed, reactive, watch } from 'vue'
+import { Record } from '../../utils/types'
 import { templatesPreset, FormField } from '../../utils/templatesPreset'
 
 const props = defineProps({
@@ -227,13 +228,7 @@ const onInput = () => {
 	padding: 16px;
 }
 
-.preview-card {
-	height: 256px;
-	overflow: hidden;
-	justify-content: center;
-	align-items: center;
-	padding: 0;
-}
+
 
 .preview-image-wrapper {
 	width: 100%;

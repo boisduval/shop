@@ -11,7 +11,6 @@
 			<view class="content-inner">
 
 				<!-- 步骤 0：选择模板 -->
-				<!-- 步骤 0：选择模板 -->
 				<view v-show="activeStep === 0" class="step-content">
 					<view>
 						<template-selector v-model="selectedTemplateId" :templates="templatesList"></template-selector>
@@ -26,23 +25,17 @@
 					<view class="selector-wrapper mt-3">
 						<cabinet-style-selector v-model="selectedCabinetStyle"></cabinet-style-selector>
 					</view>
-					<view class="card mt-4">
-						<text class="card-title">绘制空间平面设计</text>
-						<view class="canvas-placeholder">
+					<view class="preview-container preview-container-edit grid-bg">
+						<view class="canvas-wrapper">
 							<text class="placeholder-text">【平面图绘制画布占位】</text>
-							<text class="placeholder-subtext">当前选择形状：{{ selectedShape }} | 柜体款式：{{ selectedCabinetStyle }}</text>
+							<text class="placeholder-subtext">当前选择形状：{{ selectedShape }} |
+								柜体款式：{{ selectedCabinetStyle }}</text>
 							<text class="placeholder-subtext">后续在此处集成平面图绘制组件</text>
 						</view>
 					</view>
-					<drawing-param-panel
-						:shape-type="selectedShape"
-						v-model:rectW="rectW"
-						v-model:rectH="rectH"
-						v-model:trapTop="trapTop"
-						v-model:trapBottom="trapBottom"
-						v-model:trapH="trapH"
-						v-model:trapOffset="trapOffset"
-					></drawing-param-panel>
+
+					<drawing-param-panel :shapeType="selectedShape" v-model="drawingParams"></drawing-param-panel>
+
 				</view>
 
 				<!-- 步骤 2：填写表单 -->
@@ -61,7 +54,8 @@
 </template>
 
 <script setup lang="uts">
-	import { ref, computed } from 'vue'
+	import { ref, computed, reactive } from 'vue'
+	import { Record } from '../../utils/types'
 	import { templatesList } from '../../utils/templatesPreset'
 
 	const steps = ['选择模板', '绘制平面图', '填写表单']
@@ -69,21 +63,23 @@
 	const selectedTemplateId = ref(templatesList[0].id)
 	const selectedShape = ref('rect')
 	const selectedCabinetStyle = ref('default')
-	const rectW = ref(40)
-	const rectH = ref(30)
-	const trapTop = ref(30)
-	const trapBottom = ref(50)
-	const trapH = ref(30)
-	const trapOffset = ref(0)
+	const drawingParams = reactive<Record<string, any>>({
+		rectW: 40,
+		rectH: 30,
+		trapTop: 30,
+		trapBottom: 50,
+		trapH: 30,
+		trapOffset: 0
+	})
 
 	// 计算选中的模板名称
-	const selectedTemplateName = computed((): string => {
+	const selectedTemplateName = computed(() : string => {
 		const found = templatesList.find(t => t.id === selectedTemplateId.value)
 		return found != null ? found.name : ''
 	})
 
 	// 计算选中的模板英文值
-	const selectedTemplateValue = computed((): string => {
+	const selectedTemplateValue = computed(() : string => {
 		const found = templatesList.find(t => t.id === selectedTemplateId.value)
 		return found != null ? found.value : ''
 	})
@@ -100,6 +96,8 @@
 	const updateFormData = (data : Record<string, any>) => {
 		collectedFormData.value = data
 	}
+
+
 
 	const selectTemplate = (id : number) => {
 		selectedTemplateId.value = id
@@ -129,7 +127,7 @@
 			uni.hideLoading()
 			uni.showModal({
 				title: '导出成功',
-				content: `已成功使用【${selectedTemplate.value}】导出核查报告。`,
+				content: `已成功使用【${selectedTemplateName.value}】导出核查报告。`,
 				showCancel: false
 			})
 		}, 1500)

@@ -1,3 +1,5 @@
+import { Record } from './types'
+
 export interface FormField {
   key: string
   label: string
