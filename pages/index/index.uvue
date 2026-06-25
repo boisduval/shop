@@ -4,30 +4,17 @@
 		<image class="bg-image" src="/static/bg.png" mode="aspectFill"></image>
 
 		<!-- 头部区域 (AppHeader) -->
-		<app-header :active-step="activeStep" :selected-template="selectedTemplate" :steps="steps"></app-header>
+		<app-header :active-step="activeStep" :selected-template="selectedTemplateName" :steps="steps"></app-header>
 
 		<!-- 中间滚动内容区域 (Content Box) -->
 		<scroll-view class="content-scroll" :scroll-y="true">
 			<view class="content-inner">
 
 				<!-- 步骤 0：选择模板 -->
+				<!-- 步骤 0：选择模板 -->
 				<view v-show="activeStep === 0" class="step-content">
-					<view class="card">
-						<text class="card-title">请选择核查报告排版模板</text>
-						<view class="template-list">
-							<view class="template-card"
-								:class="selectedTemplate === '标准核查报告模板' ? 'template-card-active' : ''"
-								@click="selectTemplate('标准核查报告模板')">
-								<text class="template-name">标准核查报告模板</text>
-								<text class="template-desc">适合常规空间核查与标准表单导出</text>
-							</view>
-							<view class="template-card"
-								:class="selectedTemplate === '简约设计报告模板' ? 'template-card-active' : ''"
-								@click="selectTemplate('简约设计报告模板')">
-								<text class="template-name">简约设计报告模板</text>
-								<text class="template-desc">适合快捷排版与精简信息展示</text>
-							</view>
-						</view>
+					<view>
+						<template-selector v-model="selectedTemplateId" :templates="templatesList"></template-selector>
 					</view>
 				</view>
 
@@ -44,45 +31,54 @@
 
 				<!-- 步骤 2：填写表单 -->
 				<view v-show="activeStep === 2" class="step-content">
-					<view class="card">
-						<text class="card-title">填写申请信息</text>
-						<view class="form-item">
-							<text class="form-label">申请人姓名</text>
-							<input class="form-input" v-model="applicantName" placeholder="请输入申请人姓名" />
-						</view>
-						<view class="form-item">
-							<text class="form-label">项目地址</text>
-							<input class="form-input" v-model="projectAddress" placeholder="请输入项目地址" />
-						</view>
-						<view class="form-item">
-							<text class="form-label">核查说明</text>
-							<textarea class="form-textarea" v-model="notes" placeholder="请输入核查补充说明" />
-						</view>
-					</view>
+					<form-step :template-value="selectedTemplateValue" :drawing-data="drawingData"
+						@update-form-data="updateFormData"></form-step>
 				</view>
 
 			</view>
 		</scroll-view>
 
 		<!-- 底部导航 (AppFooter) -->
-		<app-footer :active-step="activeStep" :steps="steps" @prev="prevStep" @next="nextStep" @submit="exportReport"></app-footer>
+		<app-footer :active-step="activeStep" :steps="steps" @prev="prevStep" @next="nextStep"
+			@submit="exportReport"></app-footer>
 	</view>
 </template>
 
 <script setup lang="uts">
-	import { ref } from 'vue'
+	import { ref, computed } from 'vue'
+	import { templatesList } from '../../utils/templatesPreset'
 
 	const steps = ['选择模板', '绘制平面图', '填写表单']
 	const activeStep = ref(0)
-	const selectedTemplate = ref('标准核查报告模板')
+	const selectedTemplateId = ref(templatesList[0].id)
 
-	// 表单字段
-	const applicantName = ref('')
-	const projectAddress = ref('')
-	const notes = ref('')
+	// 计算选中的模板名称
+	const selectedTemplateName = computed((): string => {
+		const found = templatesList.find(t => t.id === selectedTemplateId.value)
+		return found != null ? found.name : ''
+	})
 
-	const selectTemplate = (name : string) => {
-		selectedTemplate.value = name
+	// 计算选中的模板英文值
+	const selectedTemplateValue = computed((): string => {
+		const found = templatesList.find(t => t.id === selectedTemplateId.value)
+		return found != null ? found.value : ''
+	})
+
+	// 模拟第一步绘制平面图生成的数据
+	const drawingData = ref({
+		calculatedArea: 125,
+		image: '/static/bg.png' // 使用背景图来做预览图的占位展示
+	})
+
+	// 收集第三步表单的最终数据
+	const collectedFormData = ref<Record<string, any>>({})
+
+	const updateFormData = (data : Record<string, any>) => {
+		collectedFormData.value = data
+	}
+
+	const selectTemplate = (id : number) => {
+		selectedTemplateId.value = id
 	}
 
 	const prevStep = () => {
@@ -160,34 +156,7 @@
 		margin-bottom: 16px;
 	}
 
-	.template-list {
-		flex-direction: column;
-	}
 
-	.template-card {
-		background-color: #f7f9fc;
-		border: 1px solid #e8ebee;
-		border-radius: 8px;
-		padding: 16px;
-		margin-bottom: 12px;
-	}
-
-	.template-card-active {
-		border-color: #1890ff;
-		background-color: #e6f7ff;
-	}
-
-	.template-name {
-		font-size: 16px;
-		font-weight: bold;
-		color: #333333;
-		margin-bottom: 4px;
-	}
-
-	.template-desc {
-		font-size: 12px;
-		color: #8c8c8c;
-	}
 
 	.canvas-placeholder {
 		height: 300px;
@@ -210,32 +179,5 @@
 		color: #8c8c8c;
 	}
 
-	.form-item {
-		margin-bottom: 16px;
-	}
 
-	.form-label {
-		font-size: 14px;
-		color: #595959;
-		margin-bottom: 8px;
-		font-weight: bold;
-	}
-
-	.form-input {
-		height: 40px;
-		background-color: #f5f5f5;
-		border: 1px solid #e8e8e8;
-		border-radius: 6px;
-		padding: 0 12px;
-		font-size: 14px;
-	}
-
-	.form-textarea {
-		height: 100px;
-		background-color: #f5f5f5;
-		border: 1px solid #e8e8e8;
-		border-radius: 6px;
-		padding: 12px;
-		font-size: 14px;
-	}
 </style>
