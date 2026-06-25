@@ -1,42 +1,77 @@
 <template>
-	<view class="card">
-		<text class="card-title">填写申请信息</text>
+	<view class="form-step-container">
 		
-		<!-- 动态渲染表单字段 -->
-		<view class="form-container">
-			<view 
-				v-for="field in fields" 
-				:key="field.key" 
-				class="form-item"
-			>
-				<text class="form-label">{{ field.label }}</text>
-				<view class="input-wrapper">
-					<textarea 
-						v-if="field.type === 'textarea'"
-						class="form-textarea" 
-						v-model="formData[field.key]" 
-						:placeholder="field.placeholder || ''"
-						@input="onInput"
-					/>
-					<input 
-						v-else
-						class="form-input" 
-						:type="field.type === 'number' ? 'number' : 'text'"
-						v-model="formData[field.key]" 
-						:placeholder="field.placeholder || ''"
-						@input="onInput"
-					/>
-					<!-- 动态渲染后缀，如 ㎡ 或 米 -->
-					<text v-if="field.suffix" class="input-suffix">{{ field.suffix }}</text>
+		<!-- 板块一：动态表单登记 -->
+		<view class="section-header">
+			<view class="header-left">
+				<view class="indicator bg-blue"></view>
+				<text class="section-title">表单数据登记</text>
+			</view>
+			<text class="helper-text">请完善核查表单</text>
+		</view>
+
+		<view class="glass-card form-card">
+			<!-- 动态渲染表单字段 -->
+			<view class="form-container">
+				<view 
+					v-for="(field, index) in fields" 
+					:key="field.key" 
+					class="form-item"
+					:class="index === fields.length - 1 ? 'no-border' : ''"
+				>
+					<text class="form-label">{{ field.label }}</text>
+					<view class="input-container">
+						<textarea 
+							v-if="field.type === 'textarea'"
+							class="form-textarea" 
+							v-model="formData[field.key]" 
+							:placeholder="field.placeholder || '请输入'"
+							@input="onInput"
+						/>
+						<view v-else class="input-wrapper">
+							<!-- 如果包含 date 字段，自动应用 readonly (disabled) -->
+							<input 
+								class="form-input" 
+								:type="field.type === 'number' ? 'number' : 'text'"
+								v-model="formData[field.key]" 
+								:placeholder="field.placeholder || '请输入'"
+								:disabled="field.key === 'date'"
+								@input="onInput"
+							/>
+							
+							<!-- 后缀插槽 -->
+							<text v-if="field.suffix" class="input-suffix">{{ field.suffix }}</text>
+							
+							<!-- 日期字段的跳转箭头 -->
+							<view v-if="field.key === 'date'" class="date-arrow-wrapper">
+								<uni-icons type="right" size="14" color="#94a3b8"></uni-icons>
+							</view>
+						</view>
+					</view>
 				</view>
 			</view>
 		</view>
 
-		<!-- 平面图预览层 -->
-		<view v-if="drawingData && drawingData.image" class="preview-section">
-			<text class="preview-title">核查平面图预览</text>
-			<view class="preview-image-wrapper">
-				<image class="preview-image" :src="drawingData.image" mode="aspectFit"></image>
+		<!-- 板块二：核查平面图预览卡片 (条件渲染) -->
+		<view v-if="isCheckTemplate" class="section-space">
+			<view class="section-header">
+				<view class="header-left">
+					<view class="indicator bg-emerald"></view>
+					<text class="section-title">核查平面图预览</text>
+				</view>
+				<text class="helper-text">绘制生成的平面草图预览</text>
+			</view>
+
+			<view class="glass-card preview-card">
+				<!-- 有图状态 -->
+				<view v-if="drawingImage !== ''" class="preview-image-wrapper">
+					<image class="preview-image" :src="drawingImage" mode="aspectFit"></image>
+				</view>
+				<!-- 无图占位状态 -->
+				<view v-else class="placeholder-wrapper">
+					<uni-icons type="image" size="48" color="#94a3b8" class="placeholder-icon"></uni-icons>
+					<text class="placeholder-text">未获取到平面图数据</text>
+				</view>
 			</view>
 		</view>
 	</view>
@@ -71,6 +106,23 @@ const fields = computed((): FormField[] => {
 	return [] as FormField[]
 })
 
+// 是否为有效的核查模板
+const isCheckTemplate = computed((): boolean => {
+	return props.templateValue !== ''
+})
+
+// 获取绘图图片路径
+const drawingImage = computed((): string => {
+	if (props.drawingData != null) {
+		const data = props.drawingData as Record<string, any>
+		const img = data['image']
+		if (img != null) {
+			return img as string
+		}
+	}
+	return ''
+})
+
 // 监听字段规则的变化，初始化或清理无用字段
 watch(fields, (newFields) => {
 	// 清空原先数据
@@ -85,10 +137,13 @@ watch(fields, (newFields) => {
 
 // 深度监听绘图数据的变化，自动回填测量面积
 watch(() => props.drawingData, (newVal) => {
-	if (newVal != null && newVal.calculatedArea != null) {
-		// 自动填充面积至 business_area 字段
-		formData['business_area'] = newVal.calculatedArea
-		emit('updateFormData', formData)
+	if (newVal != null) {
+		const data = newVal as Record<string, any>
+		const area = data['calculatedArea']
+		if (area != null) {
+			formData['business_area'] = area
+			emit('updateFormData', formData)
+		}
 	}
 }, { immediate: true, deep: true })
 
@@ -97,18 +152,63 @@ const onInput = () => {
 }
 </script>
 
-<style>
-.card {
-	background-color: rgba(255, 255, 255, 0.9);
-	border-radius: 12px;
-	padding: 16px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+<style lang="scss">
+.form-step-container {
+	flex-direction: column;
+	margin-top: 8px;
+	width: 100%;
 }
 
-.card-title {
-	font-size: 16px;
-	font-weight: bold;
-	color: #333333;
+.section-header {
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+	margin-top: 16px;
+}
+
+.header-left {
+	flex-direction: row;
+	align-items: center;
+}
+
+.indicator {
+	width: 4px;
+	height: 14px;
+	border-radius: 2px;
+	margin-right: 8px;
+}
+
+.bg-blue {
+	background-color: #3b82f6;
+}
+
+.bg-emerald {
+	background-color: #10b981;
+}
+
+.section-title {
+	font-size: 14px;
+	color: #1e293b;
+	font-weight: 600;
+}
+
+.helper-text {
+	font-size: 11px;
+	color: #94a3b8;
+	font-weight: 400;
+}
+
+.glass-card {
+	background-color: rgba(255, 255, 255, 0.3);
+	backdrop-filter: blur(10px);
+	border-radius: 12px;
+	border: 1px solid rgba(226, 232, 240, 0.5);
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+	padding: 16px;
+}
+
+.form-card {
 	margin-bottom: 16px;
 }
 
@@ -117,72 +217,91 @@ const onInput = () => {
 }
 
 .form-item {
-	margin-bottom: 16px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #ebedf0;
+	flex-direction: row;
+	align-items: center;
+}
+
+.no-border {
+	border-bottom: none;
 }
 
 .form-label {
 	font-size: 14px;
-	color: #475569;
-	margin-bottom: 8px;
-	font-weight: bold;
+	color: $uni-text-color;
+	width: 96px;
+	margin-right: 12px;
+}
+
+.input-container {
+	position: relative;
+	flex-direction: row;
+	flex: 1;
 }
 
 .input-wrapper {
 	position: relative;
 	flex-direction: row;
 	align-items: center;
+	flex: 1;
 }
 
 .form-input {
 	flex: 1;
-	height: 40px;
-	background-color: #f8fafc;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-	padding: 0 12px;
+	height: 36px;
+	background-color: transparent;
+	border: none;
+	padding-left: 0;
+	padding-right: 28px;
 	font-size: 14px;
-	color: #1e293b;
+	color: #323233;
 }
 
 .form-textarea {
 	flex: 1;
-	height: 100px;
-	background-color: #f8fafc;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-	padding: 12px;
+	height: 80px;
+	background-color: transparent;
+	border: none;
+	padding-left: 0;
+	padding-right: 0;
+	padding-top: 6px;
+	padding-bottom: 6px;
 	font-size: 14px;
-	color: #1e293b;
+	color: #323233;
 }
 
 .input-suffix {
 	position: absolute;
-	right: 12px;
+	right: 0;
 	font-size: 14px;
-	color: #64748b;
-	font-weight: 600;
+	color: #969799;
 }
 
-/* 预览图层 */
-.preview-section {
-	margin-top: 24px;
-	border-top: 1px dashed #e2e8f0;
-	padding-top: 16px;
+.date-arrow-wrapper {
+	position: absolute;
+	right: 0;
+	justify-content: center;
+	align-items: center;
 }
 
-.preview-title {
-	font-size: 14px;
-	font-weight: bold;
-	color: #475569;
-	margin-bottom: 12px;
+.section-space {
+	margin-top: 12px;
+	flex-direction: column;
+}
+
+.preview-card {
+	height: 256px;
+	overflow: hidden;
+	justify-content: center;
+	align-items: center;
+	padding: 0;
 }
 
 .preview-image-wrapper {
 	width: 100%;
-	height: 200px;
-	background-color: #f1f5f9;
-	border-radius: 8px;
-	overflow: hidden;
+	height: 100%;
 	justify-content: center;
 	align-items: center;
 }
@@ -190,5 +309,21 @@ const onInput = () => {
 .preview-image {
 	width: 100%;
 	height: 100%;
+}
+
+.placeholder-wrapper {
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.placeholder-icon {
+	margin-bottom: 8px;
+}
+
+.placeholder-text {
+	font-size: 14px;
+	color: #94a3b8;
+	font-weight: 500;
 }
 </style>
