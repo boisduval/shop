@@ -1,5 +1,8 @@
 <template>
 	<view class="header">
+		<!-- 左上角绝对定位 Logo 图标 -->
+		<image class="header-logo" src="/static/file1.png" mode="aspectFit"></image>
+
 		<!-- 左侧：当前步骤标题 -->
 		<text class="header-title">{{ (steps[activeStep] as string) || '选择模板' }}</text>
 
@@ -57,11 +60,22 @@
 		align-items: center;
 	}
 
+	.header-logo {
+		position: absolute;
+		top: 0px;
+		left: -20px;
+		width: 200px;
+		height: 200px;
+	}
+
 	.header-title {
 		font-size: 14px;
 		color: #1e293b;
 		font-weight: bold;
 		letter-spacing: 0.5px;
+		background-color: rgba(226, 232, 240, 0.6);
+		padding: 4px 12px;
+		border-radius: 9999px;
 	}
 
 	.capsule-combo {

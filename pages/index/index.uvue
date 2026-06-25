@@ -1,7 +1,7 @@
 <template>
 	<view class="page-container">
 		<!-- 背景图层 -->
-		<image class="bg-image" src="/static/image.png" mode="aspectFill"></image>
+		<image class="bg-image" src="/static/bg.png" mode="aspectFill"></image>
 
 		<!-- 头部区域 (AppHeader) -->
 		<app-header :active-step="activeStep" :selected-template="selectedTemplate" :steps="steps"></app-header>
