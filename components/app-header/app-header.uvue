@@ -9,7 +9,7 @@
 			<view v-if="selectedTemplate" class="capsule-tag">
 				<text class="capsule-text">{{ selectedTemplate }}</text>
 			</view>
-			
+
 			<!-- 步骤进度指示器 -->
 			<view class="capsule-tag">
 				<view class="progress-wrapper">
@@ -22,84 +22,86 @@
 </template>
 
 <script setup lang="uts">
-import { PropType } from 'vue'
+	import { PropType } from 'vue'
 
-defineProps({
-	activeStep: {
-		type: Number,
-		required: true
-	},
-	selectedTemplate: {
-		type: String,
-		required: true
-	},
-	steps: {
-		type: Array as PropType<string[]>,
-		required: true
-	}
-})
+	defineProps({
+		activeStep: {
+			type: Number,
+			required: true
+		},
+		selectedTemplate: {
+			type: String,
+			required: true
+		},
+		steps: {
+			type: Array as PropType<string[]>,
+			required: true
+		}
+	})
 </script>
 
 <style>
-.header {
-	position: sticky;
-	top: 0;
-	z-index: 50;
-	height: 56px;
-	padding: 0 24px;
-	background-color: rgba(255, 255, 255, 0.3);
-	backdrop-filter: blur(10px);
-	border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-}
+	.header {
+		position: sticky;
+		top: 0;
+		z-index: 50;
+		padding-top: calc(var(--status-bar-height) + 40px);
+		height: calc(var(--status-bar-height) + 96px);
+		padding-left: 24px;
+		padding-right: 24px;
+		background-color: rgba(255, 255, 255, 0.3);
+		backdrop-filter: blur(10px);
+		border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+	}
 
-.header-title {
-	font-size: 14px;
-	color: #1e293b;
-	font-weight: bold;
-	letter-spacing: 0.5px;
-}
+	.header-title {
+		font-size: 14px;
+		color: #1e293b;
+		font-weight: bold;
+		letter-spacing: 0.5px;
+	}
 
-.capsule-combo {
-	flex-direction: row;
-	align-items: center;
-}
+	.capsule-combo {
+		flex-direction: row;
+		align-items: center;
+	}
 
-.capsule-tag {
-	background-color: rgba(226, 232, 240, 0.8);
-	border-radius: 9999px;
-	padding: 4px 12px;
-	margin-left: 12px;
-	justify-content: center;
-	align-items: center;
-}
+	.capsule-tag {
+		background-color: rgba(226, 232, 240, 0.8);
+		border-radius: 9999px;
+		padding: 4px 12px;
+		margin-left: 12px;
+		justify-content: center;
+		align-items: center;
+	}
 
-.capsule-text {
-	font-size: 12px;
-	color: #475569;
-	max-width: 112px;
-	text-overflow: ellipsis;
-	overflow: hidden;
-	white-space: nowrap;
-}
+	.capsule-text {
+		font-size: 12px;
+		color: #475569;
+		max-width: 112px;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		white-space: nowrap;
+	}
 
-.progress-wrapper {
-	flex-direction: row;
-	align-items: center;
-}
+	.progress-wrapper {
+		flex-direction: row;
+		align-items: center;
+	}
 
-.progress-active {
-	font-size: 12px;
-	font-weight: bold;
-	color: #334155;
-}
+	.progress-active {
+		font-size: 12px;
+		font-weight: bold;
+		color: #334155;
+	}
 
-.progress-total {
-	font-size: 12px;
-	font-weight: 500;
-	color: #334155;
-	opacity: 0.6;
-}
+	.progress-total {
+		font-size: 12px;
+		font-weight: 500;
+		color: #334155;
+		opacity: 0.6;
+	}
 </style>
