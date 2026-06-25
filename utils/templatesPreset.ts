@@ -200,10 +200,9 @@ export const templatesPreset = {
 	},
 }
 
-export const templatesList = [
-	{ id: 1, name: '延续变更', type: 'DOCX', value: 'change' },
-	{ id: 2, name: '实地核查普通版', type: 'DOCX', value: 'normal' },
-	{ id: 3, name: '实地核查排队版', type: 'DOCX', value: 'queue' },
-	{ id: 4, name: '实地核查间距版', type: 'DOCX', value: 'distance' },
-	{ id: 5, name: '实地核查未过版', type: 'DOCX', value: 'reject_distance' }
-] as UTSJSONObject[]
+export const templatesList = Object.values(templatesPreset).map(t => ({
+  id: t.id,
+  name: t.name,
+  type: 'DOCX',
+  value: t.value,
+}))
