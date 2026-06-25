@@ -1,0 +1,291 @@
+<template>
+	<view class="page-container">
+		<!-- 背景图层 -->
+		<image class="bg-image" src="/static/image.png" mode="aspectFill"></image>
+
+		<!-- 头部区域 (AppHeader) -->
+		<app-header :active-step="activeStep" :selected-template="selectedTemplate" :steps="steps"></app-header>
+
+		<!-- 中间滚动内容区域 (Content Box) -->
+		<scroll-view class="content-scroll" :scroll-y="true">
+			<view class="content-inner">
+				
+				<!-- 步骤 0：选择模板 -->
+				<view v-show="activeStep === 0" class="step-content">
+					<view class="card">
+						<text class="card-title">请选择核查报告排版模板</text>
+						<view class="template-list">
+							<view 
+								class="template-card" 
+								:class="selectedTemplate === '标准核查报告模板' ? 'template-card-active' : ''"
+								@click="selectTemplate('标准核查报告模板')"
+							>
+								<text class="template-name">标准核查报告模板</text>
+								<text class="template-desc">适合常规空间核查与标准表单导出</text>
+							</view>
+							<view 
+								class="template-card" 
+								:class="selectedTemplate === '简约设计报告模板' ? 'template-card-active' : ''"
+								@click="selectTemplate('简约设计报告模板')"
+							>
+								<text class="template-name">简约设计报告模板</text>
+								<text class="template-desc">适合快捷排版与精简信息展示</text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<!-- 步骤 1：绘制平面图 -->
+				<view v-show="activeStep === 1" class="step-content">
+					<view class="card">
+						<text class="card-title">绘制空间平面设计</text>
+						<view class="canvas-placeholder">
+							<text class="placeholder-text">【平面图绘制画布占位】</text>
+							<text class="placeholder-subtext">后续在此处集成平面图绘制组件</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 步骤 2：填写表单 -->
+				<view v-show="activeStep === 2" class="step-content">
+					<view class="card">
+						<text class="card-title">填写申请信息</text>
+						<view class="form-item">
+							<text class="form-label">申请人姓名</text>
+							<input class="form-input" v-model="applicantName" placeholder="请输入申请人姓名" />
+						</view>
+						<view class="form-item">
+							<text class="form-label">项目地址</text>
+							<input class="form-input" v-model="projectAddress" placeholder="请输入项目地址" />
+						</view>
+						<view class="form-item">
+							<text class="form-label">核查说明</text>
+							<textarea class="form-textarea" v-model="notes" placeholder="请输入核查补充说明" />
+						</view>
+					</view>
+				</view>
+
+			</view>
+		</scroll-view>
+
+		<!-- 底部导航 (AppFooter) -->
+		<view class="footer">
+			<button 
+				class="nav-btn prev-btn" 
+				:disabled="activeStep === 0" 
+				@click="prevStep"
+			>
+				上一步
+			</button>
+			<button 
+				class="nav-btn next-btn" 
+				@click="nextStep"
+			>
+				{{ activeStep === 2 ? '执行导出' : '下一步' }}
+			</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref } from 'vue'
+
+const steps = ['选择模板', '绘制平面图', '填写表单']
+const activeStep = ref(0)
+const selectedTemplate = ref('标准核查报告模板')
+
+// 表单字段
+const applicantName = ref('')
+const projectAddress = ref('')
+const notes = ref('')
+
+const selectTemplate = (name: string) => {
+	selectedTemplate.value = name
+}
+
+const prevStep = () => {
+	if (activeStep.value > 0) {
+		activeStep.value--
+	}
+}
+
+const nextStep = () => {
+	if (activeStep.value < 2) {
+		activeStep.value++
+	} else {
+		exportReport()
+	}
+}
+
+const exportReport = () => {
+	uni.showLoading({
+		title: '生成并导出中...'
+	})
+	
+	// 模拟生成导出
+	setTimeout(() => {
+		uni.hideLoading()
+		uni.showModal({
+			title: '导出成功',
+			content: `已成功使用【${selectedTemplate.value}】导出核查报告。`,
+			showCancel: false
+		})
+	}, 1500)
+}
+</script>
+
+<style>
+.page-container {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.bg-image {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: -1;
+}
+
+.content-scroll {
+	flex: 1;
+}
+
+
+.content-inner {
+	padding: 16px;
+}
+
+.step-content {
+	width: 100%;
+}
+
+.card {
+	background-color: rgba(255, 255, 255, 0.9);
+	border-radius: 12px;
+	padding: 16px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.card-title {
+	font-size: 16px;
+	font-weight: bold;
+	color: #333333;
+	margin-bottom: 16px;
+}
+
+.template-list {
+	flex-direction: column;
+}
+
+.template-card {
+	background-color: #f7f9fc;
+	border: 1px solid #e8ebee;
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 12px;
+}
+
+.template-card-active {
+	border-color: #1890ff;
+	background-color: #e6f7ff;
+}
+
+.template-name {
+	font-size: 16px;
+	font-weight: bold;
+	color: #333333;
+	margin-bottom: 4px;
+}
+
+.template-desc {
+	font-size: 12px;
+	color: #8c8c8c;
+}
+
+.canvas-placeholder {
+	height: 300px;
+	background-color: #f0f2f5;
+	border: 2px dashed #d9d9d9;
+	border-radius: 8px;
+	justify-content: center;
+	align-items: center;
+}
+
+.placeholder-text {
+	font-size: 16px;
+	color: #595959;
+	font-weight: bold;
+	margin-bottom: 8px;
+}
+
+.placeholder-subtext {
+	font-size: 12px;
+	color: #8c8c8c;
+}
+
+.form-item {
+	margin-bottom: 16px;
+}
+
+.form-label {
+	font-size: 14px;
+	color: #595959;
+	margin-bottom: 8px;
+	font-weight: bold;
+}
+
+.form-input {
+	height: 40px;
+	background-color: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 6px;
+	padding: 0 12px;
+	font-size: 14px;
+}
+
+.form-textarea {
+	height: 100px;
+	background-color: #f5f5f5;
+	border: 1px solid #e8e8e8;
+	border-radius: 6px;
+	padding: 12px;
+	font-size: 14px;
+}
+
+.footer {
+	height: 70px;
+	background-color: rgba(255, 255, 255, 0.9);
+	border-top: 1px solid rgba(224, 224, 224, 0.5);
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 16px;
+}
+
+.nav-btn {
+	flex: 1;
+	height: 44px;
+	line-height: 44px;
+	font-size: 16px;
+	border-radius: 22px;
+	text-align: center;
+	font-weight: bold;
+}
+
+.prev-btn {
+	background-color: #f5f5f5;
+	color: #595959;
+	margin-right: 12px;
+	border: 1px solid #d9d9d9;
+}
+
+.next-btn {
+	background-color: #1890ff;
+	color: #ffffff;
+}
+</style>
