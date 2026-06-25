@@ -23,11 +23,14 @@
 					<view class="selector-wrapper">
 						<room-shape-selector v-model="selectedShape"></room-shape-selector>
 					</view>
+					<view class="selector-wrapper mt-3">
+						<cabinet-style-selector v-model="selectedCabinetStyle"></cabinet-style-selector>
+					</view>
 					<view class="card mt-4">
 						<text class="card-title">绘制空间平面设计</text>
 						<view class="canvas-placeholder">
 							<text class="placeholder-text">【平面图绘制画布占位】</text>
-							<text class="placeholder-subtext">当前选择形状：{{ selectedShape }}</text>
+							<text class="placeholder-subtext">当前选择形状：{{ selectedShape }} | 柜体款式：{{ selectedCabinetStyle }}</text>
 							<text class="placeholder-subtext">后续在此处集成平面图绘制组件</text>
 						</view>
 					</view>
@@ -56,6 +59,7 @@
 	const activeStep = ref(0)
 	const selectedTemplateId = ref(templatesList[0].id)
 	const selectedShape = ref('rect')
+	const selectedCabinetStyle = ref('default')
 
 	// 计算选中的模板名称
 	const selectedTemplateName = computed((): string => {
@@ -191,5 +195,9 @@
 
 	.mt-4 {
 		margin-top: 16px;
+	}
+
+	.mt-3 {
+		margin-top: 12px;
 	}
 </style>

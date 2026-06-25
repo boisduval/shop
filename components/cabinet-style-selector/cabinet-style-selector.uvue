@@ -1,0 +1,91 @@
+<template>
+	<view class="cabinet-selector-container">
+		<text class="selector-title">烟柜款式</text>
+		<view class="capsule-bar">
+			<view v-for="item in options" :key="item.value" class="style-btn"
+				:class="modelValue === item.value ? 'style-btn-active' : ''" @click="selectStyle(item.value)">
+				<text class="btn-text" :class="modelValue === item.value ? 'text-active' : ''">{{ item.label }}</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { PropType } from 'vue'
+
+	export interface CabinetOption {
+		label : string
+		value : string
+	}
+
+	defineProps({
+		modelValue: {
+			type: String,
+			required: true
+		}
+	})
+
+	const emit = defineEmits(['update:modelValue'])
+
+	const options : CabinetOption[] = [
+		{ label: '默认烟柜', value: 'default' },
+		{ label: 'L型烟柜', value: 'l-shape' },
+		{ label: '凸字型烟柜', value: 't-shape' }
+	]
+
+	const selectStyle = (value : string) => {
+		emit('update:modelValue', value)
+	}
+</script>
+
+<style>
+	.cabinet-selector-container {
+		flex-direction: column;
+		width: 100%;
+	}
+
+	.selector-title {
+		font-size: 11px;
+		color: #64748b;
+		font-weight: bold;
+		padding: 0 4px;
+		margin-bottom: 6px;
+	}
+
+	.capsule-bar {
+		flex-direction: row;
+		background-color: rgba(241, 245, 249, 0.5);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(226, 232, 240, 0.2);
+		border-radius: 12px;
+		padding: 4px;
+		box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+		width: 100%;
+	}
+
+	.style-btn {
+		flex: 1;
+		justify-content: center;
+		align-items: center;
+		padding: 8px 0;
+		border-radius: 8px;
+		background-color: transparent;
+		transition: all 0.2s;
+	}
+
+	.style-btn-active {
+		background-color: #ffffff;
+		box-shadow: 0 2px 4px rgba(226, 232, 240, 0.8);
+	}
+
+	.btn-text {
+		font-size: 12px;
+		color: #64748b;
+		font-weight: 500;
+	}
+
+	.text-active {
+		color: #3B66F5;
+		font-weight: bold;
+	}
+</style>
