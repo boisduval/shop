@@ -135,7 +135,7 @@
 
 
 	.content-inner {
-		padding: 16px;
+		padding: 16px 16px calc(120px + env(safe-area-inset-bottom));
 	}
 
 	.step-content {
