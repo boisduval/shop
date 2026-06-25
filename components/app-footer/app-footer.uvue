@@ -1,0 +1,166 @@
+<template>
+	<view class="footer">
+		<!-- 左侧：上一步控制器 -->
+		<view 
+			class="prev-controller"
+			:class="activeStep === 0 ? 'prev-disabled' : ''"
+			@click="onPrev"
+		>
+			<view class="prev-icon-wrapper">
+				<uni-icons 
+					type="left" 
+					size="18" 
+					:color="activeStep === 0 ? '#cbd5e1' : '#334155'"
+				></uni-icons>
+			</view>
+			<text class="prev-text">上一步</text>
+		</view>
+
+		<!-- 右侧：动态主操作按钮 (下一步 / 立即提交) -->
+		<!-- 下一步 -->
+		<view 
+			v-if="activeStep < steps.length - 1" 
+			class="action-btn"
+			@click="onNext"
+		>
+			<text class="action-btn-text">下一步</text>
+			<view class="icon-circle">
+				<uni-icons type="right" size="11" color="#ffffff"></uni-icons>
+			</view>
+		</view>
+
+		<!-- 立即导出 -->
+		<view 
+			v-else 
+			class="action-btn"
+			@click="onSubmit"
+		>
+			<text class="action-btn-text">立即导出</text>
+			<view class="icon-circle">
+				<uni-icons type="checkmarkempty" size="12" color="#ffffff"></uni-icons>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { PropType } from 'vue'
+
+const props = defineProps({
+	activeStep: {
+		type: Number,
+		required: true
+	},
+	steps: {
+		type: Array as PropType<string[]>,
+		required: true
+	}
+})
+
+const emit = defineEmits(['prev', 'next', 'submit'])
+
+const onPrev = () => {
+	if (props.activeStep > 0) {
+		emit('prev')
+	}
+}
+
+const onNext = () => {
+	emit('next')
+}
+
+const onSubmit = () => {
+	emit('submit')
+}
+</script>
+
+<style>
+.footer {
+	position: fixed;
+	bottom: calc(16px + env(safe-area-inset-bottom));
+	left: 16px;
+	right: 16px;
+	z-index: 50;
+	height: 72px;
+	padding: 0 32px;
+	background-color: rgba(255, 255, 255, 0.3);
+	backdrop-filter: blur(10px);
+	border-radius: 24px;
+	border: 1px solid rgba(226, 232, 240, 0.8);
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+/* 左侧上一步 */
+.prev-controller {
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: transform 0.2s, color 0.2s;
+}
+
+.prev-controller:active {
+	transform: scale(0.9);
+}
+
+.prev-icon-wrapper {
+	margin-bottom: 2px;
+}
+
+.prev-text {
+	font-size: 11px;
+	font-weight: bold;
+	color: #334155;
+}
+
+/* 禁用状态 */
+.prev-disabled {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+.prev-disabled .prev-text {
+	color: #cbd5e1;
+}
+
+.prev-controller:active {
+	color: #3b66f5;
+}
+
+/* 右侧主按钮 */
+.action-btn {
+	width: 120px;
+	height: 44px;
+	border-radius: 9999px;
+	background-image: linear-gradient(to right, #3b82f6, #4f46e5);
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4px 14px rgba(59, 130, 246, 0.2);
+	transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.action-btn:active {
+	transform: scale(0.95);
+	box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2);
+}
+
+.action-btn-text {
+	font-size: 14px;
+	font-weight: bold;
+	color: #ffffff;
+}
+
+.icon-circle {
+	width: 20px;
+	height: 20px;
+	border-radius: 10px;
+	background-color: rgba(255, 255, 255, 0.25);
+	justify-content: center;
+	align-items: center;
+	margin-left: 8px;
+}
+</style>
