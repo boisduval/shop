@@ -329,12 +329,30 @@
 				if (snapRes['isSnapped'] as boolean) {
 					doorX.value = snapRes['x'] as number
 					doorY.value = snapRes['y'] as number
-					doorAngle.value = snapRes['angle'] as number
+					
+					const wallAngle = snapRes['angle'] as number
+					const currentAngle = doorAngle.value
+					const diff1 = ((currentAngle - wallAngle + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
+					const diff2 = ((currentAngle - (wallAngle + Math.PI) + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
+					if (Math.abs(diff1) < Math.abs(diff2)) {
+						doorAngle.value = wallAngle
+					} else {
+						doorAngle.value = wallAngle + Math.PI
+					}
 				} else {
 					const forceSnapRes = snapDoorToWall({ x: tx, y: ty } as Point, segments, 999999.0)
 					doorX.value = forceSnapRes['x'] as number
 					doorY.value = forceSnapRes['y'] as number
-					doorAngle.value = forceSnapRes['angle'] as number
+					
+					const wallAngle = forceSnapRes['angle'] as number
+					const currentAngle = doorAngle.value
+					const diff1 = ((currentAngle - wallAngle + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
+					const diff2 = ((currentAngle - (wallAngle + Math.PI) + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
+					if (Math.abs(diff1) < Math.abs(diff2)) {
+						doorAngle.value = wallAngle
+					} else {
+						doorAngle.value = wallAngle + Math.PI
+					}
 				}
 			}
 			draw()
@@ -378,7 +396,16 @@
 			if (snapRes['isSnapped'] as boolean) {
 				doorX.value = snapRes['x'] as number
 				doorY.value = snapRes['y'] as number
-				doorAngle.value = snapRes['angle'] as number
+				
+				const wallAngle = snapRes['angle'] as number
+				const currentAngle = doorAngle.value
+				const diff1 = ((currentAngle - wallAngle + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
+				const diff2 = ((currentAngle - (wallAngle + Math.PI) + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
+				if (Math.abs(diff1) < Math.abs(diff2)) {
+					doorAngle.value = wallAngle
+				} else {
+					doorAngle.value = wallAngle + Math.PI
+				}
 				draw()
 			}
 		}
