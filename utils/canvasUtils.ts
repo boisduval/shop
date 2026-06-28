@@ -1,5 +1,22 @@
 import { Record } from './types'
 
+// 颜色常量定义
+export const COLOR_CABINET = '#B57474'
+export const COLOR_DOOR = '#527EBF'
+export const COLOR_TEXT = '#64748B'
+export const COLOR_WALL_FILL = '#EAEAEA'
+export const COLOR_WALL_STROKE = '#8A8A8A'
+export const COLOR_HANDLE_LINE = '#94A3B8'
+
+export const COLOR_DRAG_NORMAL = '#3B66F5'
+export const COLOR_DRAG_ACTIVE = '#2563EB'
+export const COLOR_ROTATE_NORMAL = '#10B981'
+export const COLOR_ROTATE_ACTIVE = '#059669'
+
+// 尺寸常量定义
+export const WALL_STROKE_WIDTH = 6.0
+export const DEFAULT_PADDING = 40.0
+
 /**
  * 坐标点接口
  */
@@ -223,10 +240,9 @@ export function drawCabinet(
 	ctx.font = '10px sans-serif'
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
-	ctx.fillText('烟柜', 0, 0)
 
 	// 1. 连线到控制按钮
-	ctx.strokeStyle = '#94A3B8'
+	ctx.strokeStyle = COLOR_HANDLE_LINE
 	ctx.lineWidth = 1
 	ctx.beginPath()
 	ctx.moveTo(0, -15)
@@ -273,12 +289,12 @@ export function drawDoor(
 	ctx.translate(doorX, doorY)
 	ctx.rotate(angle)
 
-	// 绘制大门矩形 (浅蓝色 #527EBF)
-	ctx.fillStyle = '#527EBF'
+	// 绘制大门矩形 (浅蓝色 COLOR_DOOR)
+	ctx.fillStyle = COLOR_DOOR
 	ctx.fillRect(-width / 2, -thickness / 2, width, thickness)
 
 	// 1. 连线到旋转按钮
-	ctx.strokeStyle = '#94A3B8'
+	ctx.strokeStyle = COLOR_HANDLE_LINE
 	ctx.lineWidth = 1
 	ctx.beginPath()
 	ctx.moveTo(0, -thickness / 2)
@@ -286,8 +302,8 @@ export function drawDoor(
 	ctx.stroke()
 
 	// 2. 绘制旋转和移动按钮
-	renderControlIcon(ctx, 0, 20, 'drag', '#527EBF')
-	renderControlIcon(ctx, 0, -20, 'rotate', '#527EBF')
+	renderControlIcon(ctx, 0, 20, 'drag', COLOR_DOOR)
+	renderControlIcon(ctx, 0, -20, 'rotate', COLOR_DOOR)
 
 	ctx.restore()
 }
@@ -385,7 +401,7 @@ export function drawAreaText(
 	width: number,
 	height: number
 ) {
-	ctx.fillStyle = '#64748B'
+	ctx.fillStyle = COLOR_TEXT
 	ctx.font = 'bold 12px sans-serif'
 	ctx.fillText(`S = ${area.toFixed(2)}㎡`, width - 95, height - 20)
 }
@@ -400,7 +416,7 @@ export function drawRoomOutline(
 	if (vertices.length < 3) return
 
 	// 绘制填充背景
-	ctx.fillStyle = '#EAEAEA'
+	ctx.fillStyle = COLOR_WALL_FILL
 	ctx.beginPath()
 	ctx.moveTo(vertices[0].x, vertices[0].y)
 	for (let i = 1; i < vertices.length; i++) {
@@ -410,8 +426,8 @@ export function drawRoomOutline(
 	ctx.fill()
 
 	// 绘制墙线描边
-	ctx.strokeStyle = '#8A8A8A'
-	ctx.lineWidth = 6
+	ctx.strokeStyle = COLOR_WALL_STROKE
+	ctx.lineWidth = WALL_STROKE_WIDTH
 	ctx.lineJoin = 'round'
 	ctx.beginPath()
 	ctx.moveTo(vertices[0].x, vertices[0].y)
@@ -434,8 +450,8 @@ export function drawFurniture(
 	const centerX = width / 2
 	const centerY = height / 2
 
-	// 绘制烟柜 (铁锈红 #B57474)
-	ctx.fillStyle = '#B57474'
+	// 绘制烟柜 (铁锈红 COLOR_CABINET)
+	ctx.fillStyle = COLOR_CABINET
 	ctx.fillRect(centerX - 30, centerY - 15, 60, 30)
 	ctx.fillStyle = '#ffffff'
 	ctx.font = '10px sans-serif'
@@ -456,6 +472,40 @@ export function getDoorInitialPosition(vertices: Point[]): Point {
 		if (vertices[i].y > maxY) maxY = vertices[i].y
 	}
 	return { x: minX, y: maxY } as Point
+}
+
+/**
+ * 绘制左下角图例
+ */
+export function drawLegends(
+	ctx: CanvasRenderingContext2D,
+	width: number,
+	height: number
+) {
+	ctx.save()
+
+	// 烟柜图例 (铁锈红 COLOR_CABINET)
+	ctx.fillStyle = COLOR_CABINET
+	ctx.beginPath()
+	ctx.arc(20, height - 20, 4, 0, Math.PI * 2)
+	ctx.fill()
+
+	ctx.fillStyle = COLOR_TEXT
+	ctx.font = '10px sans-serif'
+	ctx.textAlign = 'left'
+	ctx.textBaseline = 'middle'
+	ctx.fillText('烟柜', 30, height - 20)
+
+	// 大门图例 (浅蓝色 COLOR_DOOR)
+	ctx.fillStyle = COLOR_DOOR
+	ctx.beginPath()
+	ctx.arc(80, height - 20, 4, 0, Math.PI * 2)
+	ctx.fill()
+
+	ctx.fillStyle = COLOR_TEXT
+	ctx.fillText('大门', 90, height - 20)
+
+	ctx.restore()
 }
 
 

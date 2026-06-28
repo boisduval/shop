@@ -7,7 +7,7 @@
 
 <script setup lang="uts">
 	import { ref, watch, PropType, getCurrentInstance, onMounted } from 'vue'
-	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, getDoorRotationHandlePos } from '../../utils/canvasUtils'
+	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, getDoorRotationHandlePos, drawLegends, COLOR_CABINET } from '../../utils/canvasUtils'
 
 	const props = defineProps({
 		canvasId: {
@@ -161,7 +161,7 @@
 				cabinetY.value,
 				cabinetAngle.value,
 				props.cabinetStyle,
-				'#B57474',
+				COLOR_CABINET,
 				isDraggingCabinet.value,
 				isRotatingCabinet.value
 			)
@@ -179,6 +179,8 @@
 				isRotating.value
 			)
 		}
+
+		drawLegends(ctx, canvas.offsetWidth, canvas.offsetHeight)
 	}
 
 	const onTouchStart = (e : TouchEvent) => {

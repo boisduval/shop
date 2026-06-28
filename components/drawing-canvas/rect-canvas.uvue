@@ -5,7 +5,7 @@
 <script setup lang="uts">
 	import { ref, computed, watch, PropType } from 'vue'
 	import { Record } from '../../utils/types'
-	import { Point, calculatePolygonArea, getCanvasScale, getRoomVertices, drawAreaText, drawRoomOutline, drawFurniture } from '../../utils/canvasUtils'
+	import { Point, calculatePolygonArea, getCanvasScale, getRoomVertices, drawAreaText, drawRoomOutline, drawFurniture, COLOR_TEXT } from '../../utils/canvasUtils'
 	import BaseShapeCanvas from './base-shape-canvas.uvue'
 
 	const props = defineProps({
@@ -60,7 +60,7 @@
 		drawRoomOutline(ctx, vertices)
 
 		// 3. 绘制标注文本
-		ctx.fillStyle = '#64748B'
+		ctx.fillStyle = COLOR_TEXT
 		ctx.font = 'bold 12px sans-serif'
 
 		const rw = props.params['rectW'] as number
