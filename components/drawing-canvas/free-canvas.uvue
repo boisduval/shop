@@ -54,9 +54,9 @@
 		ctx.stroke()
 	}
 
-	watch([() => props.cabinetStyle, () => props.params], () => {
+	watch([() => props.params, () => props.cabinetStyle], () => {
 		if (baseCanvasRef.value != null) {
 			baseCanvasRef.value!.$callMethod('redraw')
-		}
-	}, { deep: true })
+ 		}
+ 	}, { deep: true })
 </script>

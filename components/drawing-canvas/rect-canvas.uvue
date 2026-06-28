@@ -60,8 +60,8 @@
 		drawRoomOutline(ctx, vertices)
 
 		// 3. 绘制标注文本
-		ctx.fillStyle = '#333333'
-		ctx.font = '12px sans-serif'
+		ctx.fillStyle = '#64748B'
+		ctx.font = 'bold 12px sans-serif'
 
 		const rw = props.params['rectW'] as number
 		const rh = props.params['rectH'] as number
@@ -87,7 +87,7 @@
 		drawFurniture(ctx, vertices, width, height)
 	}
 
-	watch([roomVertices, () => props.cabinetStyle, () => props.params], () => {
+	watch([() => props.params, () => props.cabinetStyle], () => {
 		if (baseCanvasRef.value != null) {
 			baseCanvasRef.value!.$callMethod('redraw')
 		}

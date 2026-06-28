@@ -66,7 +66,7 @@
 	const selectedTemplateId = ref(templatesList[0].id)
 	const selectedShape = ref('rect')
 	const selectedCabinetStyle = ref('default')
-	const drawingParams = reactive<Record<string, any>>({
+	const drawingParams = ref<Record<string, any>>({
 		rectW: 40,
 		rectH: 30,
 		trapTop: 30,
