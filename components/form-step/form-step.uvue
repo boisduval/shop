@@ -1,6 +1,6 @@
 <template>
 	<view class="form-step-container">
-		
+
 		<!-- 板块一：动态表单登记 -->
 		<view class="section-header">
 			<view class="header-left">
@@ -13,35 +13,21 @@
 		<view class="glass-card-form form-card">
 			<!-- 动态渲染表单字段 -->
 			<view class="form-container">
-				<view 
-					v-for="(field, index) in fields" 
-					:key="field.key" 
-					class="form-cell"
-					:class="index === fields.length - 1 ? 'form-cell-no-border' : ''"
-				>
+				<view v-for="(field, index) in fields" :key="field.key" class="form-cell"
+					:class="index === fields.length - 1 ? 'form-cell-no-border' : ''">
 					<text class="form-cell-label">{{ field.label }}</text>
 					<view class="form-cell-input-wrapper">
-						<textarea 
-							v-if="field.type === 'textarea'"
-							class="form-cell-textarea" 
-							v-model="formData[field.key]" 
-							:placeholder="field.placeholder || '请输入'"
-							@input="onInput"
-						/>
+						<textarea v-if="field.type === 'textarea'" class="form-cell-textarea"
+							v-model="formData[field.key]" :placeholder="field.placeholder || '请输入'" @input="onInput" />
 						<view v-else class="form-cell-input-wrapper">
 							<!-- 如果包含 date 字段，自动应用 readonly (disabled) -->
-							<input 
-								class="form-cell-input" 
-								:type="field.type === 'number' ? 'number' : 'text'"
-								v-model="formData[field.key]" 
-								:placeholder="field.placeholder || '请输入'"
-								:disabled="field.key === 'date'"
-								@input="onInput"
-							/>
-							
+							<input class="form-cell-input" :type="field.type === 'number' ? 'number' : 'text'"
+								v-model="formData[field.key]" :placeholder="field.placeholder || '请输入'"
+								:disabled="field.key === 'date'" @input="onInput" />
+
 							<!-- 后缀插槽 -->
 							<text v-if="field.suffix" class="form-cell-suffix">{{ field.suffix }}</text>
-							
+
 							<!-- 日期字段的跳转箭头 -->
 							<view v-if="field.key === 'date'" class="form-cell-arrow">
 								<uni-icons type="right" size="14" color="#94a3b8"></uni-icons>
@@ -78,183 +64,183 @@
 </template>
 
 <script setup lang="uts">
-import { computed, reactive, watch } from 'vue'
-import { Record } from '../../utils/types'
-import { templatesPreset, FormField } from '../../utils/templatesPreset'
+	import { computed, reactive, watch } from 'vue'
+	import { Record } from '../../utils/types'
+	import { templatesPreset, FormField } from '../../utils/templatesPreset'
 
-const props = defineProps({
-	templateValue: {
-		type: String,
-		required: true
-	},
-	drawingData: {
-		type: Object,
-		default: null
-	}
-})
-
-const emit = defineEmits(['updateFormData'])
-
-// 动态响应式表单数据存储
-const formData = reactive<Record<string, any>>({})
-
-// 动态获取当前模板对应的字段规则
-const fields = computed((): FormField[] => {
-	const val = props.templateValue
-	if (val !== '' && templatesPreset[val] != null) {
-		return templatesPreset[val]!.fields
-	}
-	return [] as FormField[]
-})
-
-// 是否为有效的核查模板
-const isCheckTemplate = computed((): boolean => {
-	return props.templateValue !== ''
-})
-
-// 获取绘图图片路径
-const drawingImage = computed((): string => {
-	if (props.drawingData != null) {
-		const data = props.drawingData as Record<string, any>
-		const img = data['image']
-		if (img != null) {
-			return img as string
+	const props = defineProps({
+		templateValue: {
+			type: String,
+			required: true
+		},
+		drawingData: {
+			type: Object,
+			default: null
 		}
-	}
-	return ''
-})
-
-// 监听字段规则的变化，初始化或清理无用字段
-watch(fields, (newFields) => {
-	// 清空原先数据
-	for (const key in formData) {
-		delete formData[key]
-	}
-	// 初始化新字段的默认值
-	newFields.forEach((field: FormField) => {
-		formData[field.key] = ''
 	})
-}, { immediate: true })
 
-// 深度监听绘图数据的变化，自动回填测量面积
-watch(() => props.drawingData, (newVal) => {
-	if (newVal != null) {
-		const data = newVal as Record<string, any>
-		const area = data['calculatedArea']
-		if (area != null) {
-			formData['business_area'] = area
-			emit('updateFormData', formData)
+	const emit = defineEmits(['updateFormData'])
+
+	// 动态响应式表单数据存储
+	const formData = reactive<Record<string, any>>({})
+
+	// 动态获取当前模板对应的字段规则
+	const fields = computed(() : FormField[] => {
+		const val = props.templateValue
+		if (val !== '' && templatesPreset[val] != null) {
+			return templatesPreset[val]!.fields
 		}
-	}
-}, { immediate: true, deep: true })
+		return [] as FormField[]
+	})
 
-const onInput = () => {
-	emit('updateFormData', formData)
-}
+	// 是否为有效的核查模板
+	const isCheckTemplate = computed(() : boolean => {
+		return props.templateValue !== ''
+	})
+
+	// 获取绘图图片路径
+	const drawingImage = computed(() : string => {
+		if (props.drawingData != null) {
+			const data = props.drawingData as Record<string, any>
+			const img = data['image']
+			if (img != null) {
+				return img as string
+			}
+		}
+		return ''
+	})
+
+	// 监听字段规则的变化，初始化或清理无用字段
+	watch(fields, (newFields) => {
+		// 清空原先数据
+		for (const key in formData) {
+			delete formData[key]
+		}
+		// 初始化新字段的默认值
+		newFields.forEach((field : FormField) => {
+			formData[field.key] = ''
+		})
+	}, { immediate: true })
+
+	// 深度监听绘图数据的变化，自动回填测量面积
+	watch(() => props.drawingData, (newVal) => {
+		if (newVal != null) {
+			const data = newVal as Record<string, any>
+			const area = data['calculatedArea']
+			if (area != null) {
+				formData['business_area'] = area
+				emit('updateFormData', formData)
+			}
+		}
+	}, { immediate: true, deep: true })
+
+	const onInput = () => {
+		emit('updateFormData', formData)
+	}
 </script>
 
 <style lang="scss">
-.form-step-container {
-	flex-direction: column;
-	margin-top: 8px;
-	width: 100%;
-}
+	.form-step-container {
+		flex-direction: column;
+		margin-top: 8px;
+		width: 100%;
+	}
 
-.section-header {
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 12px;
-	margin-top: 16px;
-}
+	.section-header {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 12px;
+		margin-top: 16px;
+	}
 
-.header-left {
-	flex-direction: row;
-	align-items: center;
-}
+	.header-left {
+		flex-direction: row;
+		align-items: center;
+	}
 
-.indicator {
-	width: 4px;
-	height: 14px;
-	border-radius: 2px;
-	margin-right: 8px;
-}
+	.indicator {
+		width: 4px;
+		height: 14px;
+		border-radius: 2px;
+		margin-right: 8px;
+	}
 
-.bg-blue {
-	background-color: #3b82f6;
-}
+	.bg-blue {
+		background-color: #3b82f6;
+	}
 
-.bg-emerald {
-	background-color: #10b981;
-}
+	.bg-emerald {
+		background-color: #10b981;
+	}
 
-.section-title {
-	font-size: 14px;
-	color: #1e293b;
-	font-weight: 600;
-}
+	.section-title {
+		font-size: 14px;
+		color: #1e293b;
+		font-weight: 600;
+	}
 
-.helper-text {
-	font-size: 11px;
-	color: #94a3b8;
-	font-weight: 400;
-}
+	.helper-text {
+		font-size: 11px;
+		color: #94a3b8;
+		font-weight: 400;
+	}
 
-.form-card {
-	margin-bottom: 16px;
-}
+	.form-card {
+		margin-bottom: 16px;
+	}
 
-.form-container {
-	flex-direction: column;
-}
+	.form-container {
+		flex-direction: column;
+	}
 
-/* 覆盖公共类，针对填写表单组件需要留出 input 后缀间距 */
-.form-cell-input {
-	padding-right: 28px;
-}
+	/* 覆盖公共类，针对填写表单组件需要留出 input 后缀间距 */
+	.form-cell-input {
+		padding-right: 28px;
+	}
 
-.section-space {
-	margin-top: 12px;
-	flex-direction: column;
-}
+	.section-space {
+		margin-top: 12px;
+		flex-direction: column;
+	}
 
-/* 本地特定预览卡片样式，无需提取至全局 */
-.glass-card {
-	background-color: rgba(255, 255, 255, 0.3);
-	backdrop-filter: blur(10px);
-	border-radius: 12px;
-	border: 1px solid rgba(226, 232, 240, 0.5);
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
-	padding: 16px;
-}
+	/* 本地特定预览卡片样式，无需提取至全局 */
+	.glass-card {
+		background-color: rgba(255, 255, 255, 0.3);
+		backdrop-filter: blur(10px);
+		border-radius: 12px;
+		border: 1px solid rgba(226, 232, 240, 0.5);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+		padding: 16px;
+	}
 
 
 
-.preview-image-wrapper {
-	width: 100%;
-	height: 100%;
-	justify-content: center;
-	align-items: center;
-}
+	.preview-image-wrapper {
+		width: 100%;
+		height: 100%;
+		justify-content: center;
+		align-items: center;
+	}
 
-.preview-image {
-	width: 100%;
-	height: 100%;
-}
+	.preview-image {
+		width: 100%;
+		height: 100%;
+	}
 
-.placeholder-wrapper {
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-}
+	.placeholder-wrapper {
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
 
-.placeholder-icon {
-	margin-bottom: 8px;
-}
+	.placeholder-icon {
+		margin-bottom: 8px;
+	}
 
-.placeholder-text {
-	font-size: 14px;
-	color: #94a3b8;
-	font-weight: 500;
-}
+	.placeholder-text {
+		font-size: 14px;
+		color: #94a3b8;
+		font-weight: 500;
+	}
 </style>

@@ -5,15 +5,15 @@
 			<view class="form-cell">
 				<text class="form-cell-label">长度 (m)</text>
 				<view class="form-cell-input-wrapper">
-					<input class="form-cell-input" type="number" :value="modelValue['rectW']" @input="e => onInput('rectW', e)"
-						placeholder="请输入长度" />
+					<input class="form-cell-input" type="number" :value="modelValue['rectW']"
+						@input="e => onInput('rectW', e)" placeholder="请输入长度" />
 				</view>
 			</view>
 			<view class="form-cell form-cell-no-border">
 				<text class="form-cell-label">宽度 (m)</text>
 				<view class="form-cell-input-wrapper">
-					<input class="form-cell-input" type="number" :value="modelValue['rectH']" @input="e => onInput('rectH', e)"
-						placeholder="请输入宽度" />
+					<input class="form-cell-input" type="number" :value="modelValue['rectH']"
+						@input="e => onInput('rectH', e)" placeholder="请输入宽度" />
 				</view>
 			</view>
 		</view>
@@ -24,30 +24,30 @@
 			<view class="slider-container mb-4">
 				<text class="slider-label">位置调节</text>
 				<view class="slider-wrapper">
-					<slider :value="modelValue['trapOffset']" :min="-100" :max="100" active-color="#3B66F5" background-color="#e2e8f0"
-						block-size="18" @change="onSliderChange" />
+					<slider :value="modelValue['trapOffset']" :min="-100" :max="100" active-color="#3B66F5"
+						background-color="#e2e8f0" block-size="18" @change="onSliderChange" />
 				</view>
 			</view>
 			<view class="glass-card-form param-card">
 				<view class="form-cell">
 					<text class="form-cell-label">上边长 (m)</text>
 					<view class="form-cell-input-wrapper">
-						<input class="form-cell-input" type="number" :value="modelValue['trapTop']" @input="e => onInput('trapTop', e)"
-							placeholder="请输入上边长" />
+						<input class="form-cell-input" type="number" :value="modelValue['trapTop']"
+							@input="e => onInput('trapTop', e)" placeholder="请输入上边长" />
 					</view>
 				</view>
 				<view class="form-cell">
 					<text class="form-cell-label">下边长 (m)</text>
 					<view class="form-cell-input-wrapper">
-						<input class="form-cell-input" type="number" :value="modelValue['trapBottom']" @input="e => onInput('trapBottom', e)"
-							placeholder="请输入下边长" />
+						<input class="form-cell-input" type="number" :value="modelValue['trapBottom']"
+							@input="e => onInput('trapBottom', e)" placeholder="请输入下边长" />
 					</view>
 				</view>
 				<view class="form-cell form-cell-no-border">
 					<text class="form-cell-label">高度 (m)</text>
 					<view class="form-cell-input-wrapper">
-						<input class="form-cell-input" type="number" :value="modelValue['trapH']" @input="e => onInput('trapH', e)"
-							placeholder="请输入高度" />
+						<input class="form-cell-input" type="number" :value="modelValue['trapH']"
+							@input="e => onInput('trapH', e)" placeholder="请输入高度" />
 					</view>
 				</view>
 			</view>
@@ -72,7 +72,7 @@
 
 	const emit = defineEmits(['update:modelValue'])
 
-	const onInput = (key: string, e : InputEvent) => {
+	const onInput = (key : string, e : InputEvent) => {
 		const val = parseFloat(e.detail.value)
 		if (!isNaN(val)) {
 			const newVal = { ...props.modelValue }
@@ -91,7 +91,7 @@
 <style lang="scss">
 	.param-panel-container {
 		width: 100%;
-		margin-top: 16px;
+		margin-top: 8px;
 	}
 
 	.param-group {

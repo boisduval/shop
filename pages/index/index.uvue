@@ -8,18 +8,12 @@
 
 		<!-- 步骤 1 的非滚动 Canvas 画布区域 (参考官方示例，放在滚动区域外) -->
 		<view v-show="activeStep === 1" class="preview-container preview-container-edit grid-bg">
-			<rect-canvas v-if="selectedShape === 'rect'"
-				:cabinet-style="selectedCabinetStyle"
-				:params="drawingParams" :active-step="activeStep"
-				@update:area="onAreaUpdate"></rect-canvas>
-			<trap-canvas v-if="selectedShape === 'trap'"
-				:cabinet-style="selectedCabinetStyle"
-				:params="drawingParams" :active-step="activeStep"
-				@update:area="onAreaUpdate"></trap-canvas>
-			<free-canvas v-if="selectedShape === 'free'"
-				:cabinet-style="selectedCabinetStyle"
-				:params="drawingParams" :active-step="activeStep"
-				@update:area="onAreaUpdate"></free-canvas>
+			<rect-canvas v-if="selectedShape === 'rect'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
+				:active-step="activeStep" @update:area="onAreaUpdate"></rect-canvas>
+			<trap-canvas v-if="selectedShape === 'trap'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
+				:active-step="activeStep" @update:area="onAreaUpdate"></trap-canvas>
+			<free-canvas v-if="selectedShape === 'free'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
+				:active-step="activeStep" @update:area="onAreaUpdate"></free-canvas>
 		</view>
 
 		<!-- 中间滚动/内容区域 -->
@@ -38,7 +32,7 @@
 					<view class="selector-wrapper">
 						<room-shape-selector v-model="selectedShape"></room-shape-selector>
 					</view>
-					<view class="selector-wrapper mt-3">
+					<view class="selector-wrapper">
 						<cabinet-style-selector v-model="selectedCabinetStyle"></cabinet-style-selector>
 					</view>
 					<drawing-param-panel :shapeType="selectedShape" v-model="drawingParams"></drawing-param-panel>
@@ -173,7 +167,7 @@
 
 
 	.content-inner {
-		padding: 16px 16px calc(120px + env(safe-area-inset-bottom));
+		padding: 0 16px calc(120px + env(safe-area-inset-bottom));
 	}
 
 	.step-content {
@@ -220,13 +214,5 @@
 	.selector-wrapper {
 		margin-bottom: 12px;
 		width: 100%;
-	}
-
-	.mt-4 {
-		margin-top: 16px;
-	}
-
-	.mt-3 {
-		margin-top: 12px;
 	}
 </style>
