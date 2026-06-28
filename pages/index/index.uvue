@@ -26,12 +26,18 @@
 						<cabinet-style-selector v-model="selectedCabinetStyle"></cabinet-style-selector>
 					</view>
 					<view class="preview-container preview-container-edit grid-bg">
-						<view class="canvas-wrapper">
-							<text class="placeholder-text">【平面图绘制画布占位】</text>
-							<text class="placeholder-subtext">当前选择形状：{{ selectedShape }} |
-								柜体款式：{{ selectedCabinetStyle }}</text>
-							<text class="placeholder-subtext">后续在此处集成平面图绘制组件</text>
-						</view>
+						<rect-canvas v-if="selectedShape === 'rect'"
+							:cabinet-style="selectedCabinetStyle"
+							:params="drawingParams" :active-step="activeStep"
+							@update:area="onAreaUpdate"></rect-canvas>
+						<trap-canvas v-if="selectedShape === 'trap'"
+							:cabinet-style="selectedCabinetStyle"
+							:params="drawingParams" :active-step="activeStep"
+							@update:area="onAreaUpdate"></trap-canvas>
+						<free-canvas v-if="selectedShape === 'free'"
+							:cabinet-style="selectedCabinetStyle"
+							:params="drawingParams" :active-step="activeStep"
+							@update:area="onAreaUpdate"></free-canvas>
 					</view>
 
 					<drawing-param-panel :shapeType="selectedShape" v-model="drawingParams"></drawing-param-panel>
@@ -57,6 +63,9 @@
 	import { ref, computed, reactive } from 'vue'
 	import { Record } from '../../utils/types'
 	import { templatesList } from '../../utils/templatesPreset'
+	import RectCanvas from '../../components/drawing-canvas/rect-canvas.uvue'
+	import TrapCanvas from '../../components/drawing-canvas/trap-canvas.uvue'
+	import FreeCanvas from '../../components/drawing-canvas/free-canvas.uvue'
 
 	const steps = ['选择模板', '绘制平面图', '填写表单']
 	const activeStep = ref(0)
@@ -72,6 +81,8 @@
 		trapOffset: 0
 	})
 
+	const currentArea = ref(1200.0)
+
 	// 计算选中的模板名称
 	const selectedTemplateName = computed(() : string => {
 		const found = templatesList.find(t => t.id === selectedTemplateId.value)
@@ -84,10 +95,12 @@
 		return found != null ? found.value : ''
 	})
 
-	// 模拟第一步绘制平面图生成的数据
-	const drawingData = ref({
-		calculatedArea: 125,
-		image: '/static/bg.png' // 使用背景图来做预览图的占位展示
+	// 第一步绘制平面图生成的数据
+	const drawingData = computed(() => {
+		return {
+			calculatedArea: currentArea.value,
+			image: '/static/bg.png' // 使用背景图来做预览图的占位展示
+		}
 	})
 
 	// 收集第三步表单的最终数据
@@ -97,7 +110,9 @@
 		collectedFormData.value = data
 	}
 
-
+	const onAreaUpdate = (area : number) => {
+		currentArea.value = area
+	}
 
 	const selectTemplate = (id : number) => {
 		selectedTemplateId.value = id

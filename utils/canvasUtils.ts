@@ -1,0 +1,275 @@
+import { Record } from './types'
+
+/**
+ * 坐标点接口
+ */
+export interface Point {
+	x: number
+	y: number
+}
+
+/**
+ * 墙面线段接口
+ */
+export interface WallSegment {
+	p1: Point
+	p2: Point
+	angle: number // 弧度值
+}
+
+/**
+ * 1. 智能吸附计算器
+ * 计算点到所有墙面线段的垂直距离，如果小于阈值，则吸附到最近的投影点并调整偏转角
+ */
+export function snapDoorToWall(
+	doorPos: Point,
+	segments: WallSegment[],
+	threshold: number = 20.0
+): Record<string, any> {
+	let minDistance = 999999.0
+	let bestX = doorPos.x
+	let bestY = doorPos.y
+	let bestAngle = 0.0
+	let isSnapped = false
+
+	for (let i = 0; i < segments.length; i++) {
+		const seg = segments[i]
+		const p1 = seg.p1
+		const p2 = seg.p2
+
+		// 计算线段向量与投影
+		const abX = p2.x - p1.x
+		const abY = p2.y - p1.y
+		const apX = doorPos.x - p1.x
+		const apY = doorPos.y - p1.y
+
+		const abLenSq = abX * abX + abY * abY
+		if (abLenSq == 0) continue
+
+		// 投影比例 t 限制在 [0, 1] 之间
+		let t = (apX * abX + apY * abY) / abLenSq
+		t = Math.max(0.0, Math.min(1.0, t))
+
+		// 墙面上最近的投影点
+		const projX = p1.x + t * abX
+		const projY = p1.y + t * abY
+
+		// 计算门中心到投影点的距离
+		const dx = doorPos.x - projX
+		const dy = doorPos.y - projY
+		const dist = Math.sqrt(dx * dx + dy * dy)
+
+		if (dist < minDistance && dist < threshold) {
+			minDistance = dist
+			bestX = projX
+			bestY = projY
+			bestAngle = seg.angle
+			isSnapped = true
+		}
+	}
+
+	const res = {} as Record<string, any>
+	res['x'] = bestX
+	res['y'] = bestY
+	res['angle'] = bestAngle
+	res['isSnapped'] = isSnapped
+	return res
+}
+
+/**
+ * 2. 多边形物理面积计算 (Shoelace 算法)
+ * @param vertices 顶点数组
+ * @param scale 像素与米比例尺 (例如 40.0 像素代表 1米)
+ */
+export function calculatePolygonArea(vertices: Point[], scale: number): number {
+	const n = vertices.length
+	if (n < 3) return 0.0
+
+	let area = 0.0
+	for (let i = 0; i < n; i++) {
+		const j = (i + 1) % n
+		area += vertices[i].x * vertices[j].y
+		area -= vertices[j].x * vertices[i].y
+	}
+	
+	const pixelArea = Math.abs(area) / 2.0
+	return pixelArea / (scale * scale)
+}
+
+/**
+ * 3. 墙体线段生成器
+ */
+export function generateWallSegments(vertices: Point[]): WallSegment[] {
+	const segments: WallSegment[] = []
+	const n = vertices.length
+	for (let i = 0; i < n; i++) {
+		const p1 = vertices[i]
+		const p2 = vertices[(i + 1) % n]
+		const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x)
+		segments.push({
+			p1: p1,
+			p2: p2,
+			angle: angle
+		} as WallSegment)
+	}
+}
+/**
+ * 4. 计算当前动态缩放比
+ */
+export function getCanvasScale(
+	shapeType: string,
+	params: Record<string, any>,
+	canvasWidth: number,
+	canvasHeight: number,
+	padding: number
+): number {
+	if (shapeType === 'rect') {
+		const rw = params['rectW'] as number
+		const rh = params['rectH'] as number
+		if (rw <= 0 || rh <= 0) return 40.0
+		const scaleX = (canvasWidth - padding * 2) / rw
+		const scaleY = (canvasHeight - padding * 2) / rh
+		return Math.min(scaleX, scaleY)
+	} else if (shapeType === 'trap') {
+		const tt = params['trapTop'] as number
+		const tb = params['trapBottom'] as number
+		const th = params['trapH'] as number
+		const to = params['trapOffset'] as number
+		if (tt <= 0 || tb <= 0 || th <= 0) return 40.0
+		const minX = Math.min(0.0, to)
+		const maxX = Math.max(tb, to + tt)
+		const actualW = maxX - minX
+		const scaleX = (canvasWidth - padding * 2) / actualW
+		const scaleY = (canvasHeight - padding * 2) / th
+		return Math.min(scaleX, scaleY)
+	}
+	return 40.0
+}
+
+/**
+ * 5. 计算当前房间顶点坐标
+ */
+export function getRoomVertices(
+	shapeType: string,
+	params: Record<string, any>,
+	canvasWidth: number,
+	canvasHeight: number,
+	scale: number
+): Point[] {
+	const vertices: Point[] = []
+
+	if (shapeType === 'rect') {
+		const rw = params['rectW'] as number
+		const rh = params['rectH'] as number
+		const sw = rw * scale
+		const sh = rh * scale
+		const x0 = (canvasWidth - sw) / 2
+		const y0 = (canvasHeight - sh) / 2
+
+		vertices.push({ x: x0, y: y0 } as Point)
+		vertices.push({ x: x0 + sw, y: y0 } as Point)
+		vertices.push({ x: x0 + sw, y: y0 + sh } as Point)
+		vertices.push({ x: x0, y: y0 + sh } as Point)
+	} else if (shapeType === 'trap') {
+		const tt = params['trapTop'] as number
+		const tb = params['trapBottom'] as number
+		const th = params['trapH'] as number
+		const to = params['trapOffset'] as number
+
+		const minX = Math.min(0.0, to)
+		const maxX = Math.max(tb, to + tt)
+		const actualW = maxX - minX
+
+		const sw_top = tt * scale
+		const sw_bottom = tb * scale
+		const sh = th * scale
+		const soff = to * scale
+		const sw_max = actualW * scale
+		const sminX = minX * scale
+
+		const L = (canvasWidth - sw_max) / 2
+		const T = (canvasHeight - sh) / 2
+
+		vertices.push({ x: L + soff - sminX, y: T } as Point)
+		vertices.push({ x: L + soff + sw_top - sminX, y: T } as Point)
+		vertices.push({ x: L + sw_bottom - sminX, y: T + sh } as Point)
+		vertices.push({ x: L - sminX, y: T + sh } as Point)
+	}
+	return vertices
+}
+
+/**
+ * 6. 统一绘制面积数据标注方法 (右下角留边距)
+ */
+export function drawAreaText(
+	ctx: CanvasRenderingContext2D,
+	area: number,
+	width: number,
+	height: number
+) {
+	ctx.fillStyle = '#64748B'
+	ctx.font = 'bold 12px sans-serif'
+	ctx.fillText(`S = ${area.toFixed(2)}㎡`, width - 95, height - 20)
+}
+
+/**
+ * 7. 统一绘制房间轮廓（包括填充背景和描边）
+ */
+export function drawRoomOutline(
+	ctx: CanvasRenderingContext2D,
+	vertices: Point[]
+) {
+	if (vertices.length < 3) return
+
+	// 绘制填充背景
+	ctx.fillStyle = '#EAEAEA'
+	ctx.beginPath()
+	ctx.moveTo(vertices[0].x, vertices[0].y)
+	for (let i = 1; i < vertices.length; i++) {
+		ctx.lineTo(vertices[i].x, vertices[i].y)
+	}
+	ctx.closePath()
+	ctx.fill()
+
+	// 绘制墙线描边
+	ctx.strokeStyle = '#8A8A8A'
+	ctx.lineWidth = 6
+	ctx.lineJoin = 'round'
+	ctx.beginPath()
+	ctx.moveTo(vertices[0].x, vertices[0].y)
+	for (let i = 1; i < vertices.length; i++) {
+		ctx.lineTo(vertices[i].x, vertices[i].y)
+	}
+	ctx.closePath()
+	ctx.stroke()
+}
+
+/**
+ * 8. 统一绘制烟柜与大门 (模拟摆放)
+ */
+export function drawFurniture(
+	ctx: CanvasRenderingContext2D,
+	vertices: Point[],
+	width: number,
+	height: number
+) {
+	const centerX = width / 2
+	const centerY = height / 2
+
+	// 绘制烟柜 (铁锈红 #B57474)
+	ctx.fillStyle = '#B57474'
+	ctx.fillRect(centerX - 30, centerY - 15, 60, 30)
+	ctx.fillStyle = '#ffffff'
+	ctx.font = '10px sans-serif'
+	ctx.fillText('烟柜', centerX - 10, centerY + 4)
+
+	// 绘制大门 (浅蓝色 #527EBF，吸附在底墙中间)
+	if (vertices.length >= 4) {
+		const bottomWallMidX = (vertices[2].x + vertices[3].x) / 2
+		const bottomWallMidY = (vertices[2].y + vertices[3].y) / 2
+		ctx.fillStyle = '#527EBF'
+		ctx.fillRect(bottomWallMidX - 20, bottomWallMidY - 5, 40, 10)
+	}
+}
+
+

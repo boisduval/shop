@@ -1,0 +1,109 @@
+<template>
+	<base-shape-canvas ref="baseCanvasRef" canvas-id="trapCanvas" :active-step="activeStep" :draw-fn="drawTrap"></base-shape-canvas>
+</template>
+
+<script setup lang="uts">
+	import { ref, computed, watch, PropType } from 'vue'
+	import { Record } from '../../utils/types'
+	import { Point, calculatePolygonArea, getCanvasScale, getRoomVertices, drawAreaText, drawRoomOutline, drawFurniture } from '../../utils/canvasUtils'
+	import BaseShapeCanvas from './base-shape-canvas.uvue'
+
+	const props = defineProps({
+		cabinetStyle: {
+			type: String,
+			required: true
+		},
+		params: {
+			type: Object as PropType<Record<string, any>>,
+			required: true
+		},
+		activeStep: {
+			type: Number,
+			required: true
+		}
+	})
+
+	const emit = defineEmits(['update:area'])
+
+	const baseCanvasRef = ref<ComponentPublicInstance | null>(null)
+	const padding = 40.0
+
+	// 局部状态存储当前画布真实的宽高
+	const currentWidth = ref(300.0)
+	const currentHeight = ref(300.0)
+
+	const canvasScale = computed(() : number => {
+		return getCanvasScale('trap', props.params, currentWidth.value, currentHeight.value, padding)
+	})
+
+	const roomVertices = computed(() : Point[] => {
+		return getRoomVertices('trap', props.params, currentWidth.value, currentHeight.value, canvasScale.value)
+	})
+
+	const calculatedAreaValue = computed(() : number => {
+		return calculatePolygonArea(roomVertices.value, canvasScale.value)
+	})
+
+	watch(calculatedAreaValue, (newVal) => {
+		emit('update:area', Math.round(newVal * 100) / 100)
+	}, { immediate: true })
+
+	const drawTrap = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+		currentWidth.value = width
+		currentHeight.value = height
+
+		ctx.clearRect(0, 0, width, height)
+		const vertices = roomVertices.value
+		if (vertices.length < 3) return
+
+		// 1. 绘制房间背景与描边
+		drawRoomOutline(ctx, vertices)
+
+		// 3. 绘制标注文本
+		ctx.fillStyle = '#333333'
+		ctx.font = '12px sans-serif'
+
+		const tt = props.params['trapTop'] as number
+		const tb = props.params['trapBottom'] as number
+		const th = props.params['trapH'] as number
+		const to = props.params['trapOffset'] as number
+
+		const minX = Math.min(0.0, to)
+		const maxX = Math.max(tb, to + tt)
+		const actualW = maxX - minX
+
+		const scale = canvasScale.value
+		const sw_top = tt * scale
+		const sw_bottom = tb * scale
+		const sh = th * scale
+		const soff = to * scale
+		const sw_max = actualW * scale
+		const sminX = minX * scale
+
+		const L = (width - sw_max) / 2
+		const T = (height - sh) / 2
+
+		// 上底标注
+		const topMidX = L + (soff + sw_top / 2.0 - sminX)
+		ctx.fillText(`${tt}m`, topMidX - 10, T - 15)
+
+		// 下底标注
+		const bottomMidX = L + (sw_bottom / 2.0 - sminX)
+		ctx.fillText(`${tb}m`, bottomMidX - 10, T + sh + 20)
+
+		// 高度标注
+		ctx.fillText(`${th}m`, L - 25, T + sh / 2 + 4)
+
+		// 面积数据标注
+		drawAreaText(ctx, calculatedAreaValue.value, width, height)
+
+		// 4. 绘制烟柜与大门 (模拟摆放)
+		drawFurniture(ctx, vertices, width, height)
+	}
+
+	watch([roomVertices, () => props.cabinetStyle, () => props.params], () => {
+		if (baseCanvasRef.value != null) {
+			baseCanvasRef.value!.$callMethod('redraw')
+		}
+	}, { deep: true })
+</script>

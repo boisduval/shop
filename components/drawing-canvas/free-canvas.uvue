@@ -1,0 +1,62 @@
+<template>
+	<base-shape-canvas ref="baseCanvasRef" canvas-id="freeCanvas" :active-step="activeStep" :draw-fn="drawFree"></base-shape-canvas>
+</template>
+
+<script setup lang="uts">
+	import { ref, computed, watch, PropType } from 'vue'
+	import { Record } from '../../utils/types'
+	import { Point } from '../../utils/canvasUtils'
+	import BaseShapeCanvas from './base-shape-canvas.uvue'
+
+	const props = defineProps({
+		cabinetStyle: {
+			type: String,
+			required: true
+		},
+		params: {
+			type: Object as PropType<Record<string, any>>,
+			required: true
+		},
+		activeStep: {
+			type: Number,
+			required: true
+		}
+	})
+
+	const emit = defineEmits(['update:area'])
+
+	const baseCanvasRef = ref<ComponentPublicInstance | null>(null)
+
+	const drawFree = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+		ctx.clearRect(0, 0, width, height)
+
+		// 模拟绘制多边形
+		ctx.fillStyle = '#EAEAEA'
+		ctx.beginPath()
+		ctx.moveTo(width * 0.2, height * 0.2)
+		ctx.lineTo(width * 0.8, height * 0.2)
+		ctx.lineTo(width * 0.9, height * 0.7)
+		ctx.lineTo(width * 0.5, height * 0.9)
+		ctx.lineTo(width * 0.1, height * 0.6)
+		ctx.closePath()
+		ctx.fill()
+
+		ctx.strokeStyle = '#8A8A8A'
+		ctx.lineWidth = 6
+		ctx.stroke()
+
+		// 只画一条红色对角线
+		ctx.strokeStyle = '#FF0000'
+		ctx.lineWidth = 6
+		ctx.beginPath()
+		ctx.moveTo(20, 20)
+		ctx.lineTo(150, 150)
+		ctx.stroke()
+	}
+
+	watch([() => props.cabinetStyle, () => props.params], () => {
+		if (baseCanvasRef.value != null) {
+			baseCanvasRef.value!.$callMethod('redraw')
+		}
+	}, { deep: true })
+</script>
