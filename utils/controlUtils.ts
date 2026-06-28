@@ -154,3 +154,58 @@ export function getDoorRotationHandlePos(
 	const ry = doorY + rx_local * Math.sin(angle) + ry_local * Math.cos(angle)
 	return { x: rx, y: ry } as Point
 }
+
+/**
+ * 根据拉伸端点计算大门拉伸后的宽度与中心点坐标
+ */
+export function calculateDoorScaleAndPos(
+	tx: number,
+	ty: number,
+	anchorX: number,
+	anchorY: number,
+	doorAngle: number,
+	draggedDoorEnd: number
+): Record<string, number> {
+	const dist = Math.sqrt((tx - anchorX) * (tx - anchorX) + (ty - anchorY) * (ty - anchorY))
+	const width = Math.max(20.0, dist)
+	const offsetFactor = (draggedDoorEnd == 0) ? -0.5 : 0.5
+	const x = anchorX + offsetFactor * width * Math.cos(doorAngle)
+	const y = anchorY + offsetFactor * width * Math.sin(doorAngle)
+	
+	const res = {} as Record<string, number>
+	res['x'] = x
+	res['y'] = y
+	res['width'] = width
+	return res
+}
+
+/**
+ * 根据拖拽角计算烟柜等比缩放后的比例与中心点坐标
+ */
+export function calculateCabinetScaleAndPos(
+	tx: number,
+	ty: number,
+	anchorX: number,
+	anchorY: number,
+	cabinetAngle: number,
+	draggedCornerIndex: number
+): Record<string, number> {
+	const dist = Math.sqrt((tx - anchorX) * (tx - anchorX) + (ty - anchorY) * (ty - anchorY))
+	const initialDiag = 54.08325
+	const cs = Math.max(0.4, dist / initialDiag)
+
+	const oppIdx = (draggedCornerIndex + 2) % 4
+	const clx_unscaled = [-22.5, 22.5, 22.5, -22.5]
+	const cly_unscaled = [-15.0, -15.0, 15.0, 15.0]
+	const alx_unscaled = clx_unscaled[oppIdx]
+	const aly_unscaled = cly_unscaled[oppIdx]
+
+	const x = anchorX - cs * (alx_unscaled * Math.cos(cabinetAngle) - aly_unscaled * Math.sin(cabinetAngle))
+	const y = anchorY - cs * (alx_unscaled * Math.sin(cabinetAngle) + aly_unscaled * Math.cos(cabinetAngle))
+	
+	const res = {} as Record<string, number>
+	res['x'] = x
+	res['y'] = y
+	res['scale'] = cs
+	return res
+}

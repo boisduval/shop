@@ -8,7 +8,7 @@
 <script setup lang="uts">
 	import { ref, watch, PropType, getCurrentInstance, onMounted } from 'vue'
 	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, drawLegends, COLOR_CABINET } from '../../utils/canvasUtils'
-	import { getDoorRotationHandlePos } from '../../utils/controlUtils'
+	import { getDoorRotationHandlePos, calculateDoorScaleAndPos, calculateCabinetScaleAndPos } from '../../utils/controlUtils'
 
 	const props = defineProps({
 		canvasId: {
@@ -346,12 +346,10 @@
 			draw()
 		} else if (isScalingDoor.value) {
 			isDoorManuallyPlaced.value = true
-			const dist = Math.sqrt((tx - anchorX.value) * (tx - anchorX.value) + (ty - anchorY.value) * (ty - anchorY.value))
-			doorWidth.value = Math.max(20.0, dist)
-			const dAngle = doorAngle.value
-			const offsetFactor = (draggedDoorEnd.value == 0) ? -0.5 : 0.5
-			doorX.value = anchorX.value + offsetFactor * doorWidth.value * Math.cos(dAngle)
-			doorY.value = anchorY.value + offsetFactor * doorWidth.value * Math.sin(dAngle)
+			const doorRes = calculateDoorScaleAndPos(tx, ty, anchorX.value, anchorY.value, doorAngle.value, draggedDoorEnd.value)
+			doorX.value = doorRes['x'] as number
+			doorY.value = doorRes['y'] as number
+			doorWidth.value = doorRes['width'] as number
 			draw()
 		} else if (isDraggingCabinet.value) {
 			cabinetX.value = tx - dragStartOffsetX.value
@@ -364,20 +362,10 @@
 			cabinetAngle.value = rawAngle
 			draw()
 		} else if (isScalingCabinet.value) {
-			const dist = Math.sqrt((tx - anchorX.value) * (tx - anchorX.value) + (ty - anchorY.value) * (ty - anchorY.value))
-			const initialDiag = 54.08325
-			const cs = Math.max(0.4, dist / initialDiag)
-			cabinetScale.value = cs
-
-			const cAngle = cabinetAngle.value
-			const oppIdx = (draggedCornerIndex.value + 2) % 4
-			const clx_unscaled = [-22.5, 22.5, 22.5, -22.5]
-			const cly_unscaled = [-15.0, -15.0, 15.0, 15.0]
-			const alx_unscaled = clx_unscaled[oppIdx]
-			const aly_unscaled = cly_unscaled[oppIdx]
-
-			cabinetX.value = anchorX.value - cs * (alx_unscaled * Math.cos(cAngle) - aly_unscaled * Math.sin(cAngle))
-			cabinetY.value = anchorY.value - cs * (alx_unscaled * Math.sin(cAngle) + aly_unscaled * Math.cos(cAngle))
+			const cabRes = calculateCabinetScaleAndPos(tx, ty, anchorX.value, anchorY.value, cabinetAngle.value, draggedCornerIndex.value)
+			cabinetX.value = cabRes['x'] as number
+			cabinetY.value = cabRes['y'] as number
+			cabinetScale.value = cabRes['scale'] as number
 			draw()
 		}
 	}
