@@ -35,6 +35,8 @@
 		}
 	})
 
+	const dpr = uni.getWindowInfo().pixelRatio
+
 	let canvasCtx : CanvasRenderingContext2D | null = null
 	const canvasWidth = ref(300.0)
 	const canvasHeight = ref(300.0)
@@ -83,7 +85,6 @@
 			success: (context : CanvasContext) => {
 				canvasCtx = context.getContext('2d')!
 				const canvas = canvasCtx!.canvas
-				const dpr = uni.getDeviceInfo().devicePixelRatio ?? 1;
 				canvas.width = canvas.offsetWidth * dpr
 				canvas.height = canvas.offsetHeight * dpr
 				canvasWidth.value = canvas.width
@@ -404,13 +405,18 @@
 			uni.createSelectorQuery()
 				.in(instance)
 				.select('#' + props.canvasId)
-				.fields({ node: true } as Record<string, any>)
+				.fields({ node: true, size: true } as Record<string, any>)
 				.exec((res : any[]) => {
 					if (res.length > 0 && res[0] != null) {
 						const canvasNode = res[0]['node']
+						const width = res[0]['width'] as number
+						const height = res[0]['height'] as number
 						if (canvasNode != null) {
 							uni.canvasToTempFilePath({
 								canvas: canvasNode,
+								destWidth: width * dpr * 2,
+								destHeight: height * dpr * 2,
+								fileType: 'png',
 								success: (res2) => {
 									callback(res2.tempFilePath)
 								},
