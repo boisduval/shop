@@ -1,4 +1,6 @@
+import { renderControlIcon } from './controlUtils'
 import { Record } from './types'
+
 
 // 颜色常量定义
 export const COLOR_CABINET = '#B57474'
@@ -132,65 +134,6 @@ export function generateWallSegments(vertices: Point[]): WallSegment[] {
 	return segments
 }
 
-export function renderControlIcon(
-	ctx: CanvasRenderingContext2D,
-	left: number,
-	top: number,
-	type: string,
-	color: string
-) {
-	ctx.save()
-	ctx.translate(left, top)
-
-	// Draw circle background
-	ctx.beginPath()
-	ctx.arc(0, 0, 8, 0, Math.PI * 2)
-	ctx.fillStyle = color
-	ctx.fill()
-
-	ctx.strokeStyle = '#ffffff'
-	ctx.lineWidth = 1.2
-	ctx.lineCap = 'round'
-	ctx.lineJoin = 'round'
-
-	if (type === 'drag') {
-		// Horizontal line & arrows
-		ctx.beginPath()
-		ctx.moveTo(-5, 0)
-		ctx.lineTo(5, 0)
-		ctx.moveTo(-3, -2)
-		ctx.lineTo(-5, 0)
-		ctx.lineTo(-3, 2)
-		ctx.moveTo(3, -2)
-		ctx.lineTo(5, 0)
-		ctx.lineTo(3, 2)
-
-		// Vertical line & arrows
-		ctx.moveTo(0, -5)
-		ctx.lineTo(0, 5)
-		ctx.moveTo(-2, -3)
-		ctx.lineTo(0, -5)
-		ctx.lineTo(2, -3)
-		ctx.moveTo(-2, 3)
-		ctx.lineTo(0, 5)
-		ctx.lineTo(2, 3)
-		ctx.stroke()
-	} else if (type === 'rotate') {
-		// Draw circular arrow icon
-		ctx.beginPath()
-		ctx.arc(0, 0.5, 4, -Math.PI / 4, Math.PI * 5 / 4)
-		ctx.stroke()
-
-		// Arrow head at the end
-		ctx.beginPath()
-		ctx.moveTo(0.5, -3.5)
-		ctx.lineTo(4.5, -3.5)
-		ctx.lineTo(4.5, 0.5)
-		ctx.stroke()
-	}
-
-	ctx.restore()
-}
 
 /**
  * 绘制烟柜及其控制按钮
@@ -203,7 +146,9 @@ export function drawCabinet(
 	type: string,
 	color: string,
 	isDragging: boolean,
-	isRotating: boolean
+	isRotating: boolean,
+	scale: number,
+	isActive: boolean
 ) {
 	ctx.save()
 	ctx.translate(cabX, cabY)
@@ -213,47 +158,61 @@ export function drawCabinet(
 	ctx.beginPath()
 
 	if (type === 'l_shape') {
-		ctx.moveTo(-22.5, -15)
-		ctx.lineTo(22.5, -15)
-		ctx.lineTo(22.5, 0)
-		ctx.lineTo(-7.5, 0)
-		ctx.lineTo(-7.5, 15)
-		ctx.lineTo(-22.5, 15)
+		ctx.moveTo(-22.5 * scale, -15 * scale)
+		ctx.lineTo(22.5 * scale, -15 * scale)
+		ctx.lineTo(22.5 * scale, 0)
+		ctx.lineTo(-7.5 * scale, 0)
+		ctx.lineTo(-7.5 * scale, 15 * scale)
+		ctx.lineTo(-22.5 * scale, 15 * scale)
 		ctx.closePath()
 	} else if (type === 'convex') {
-		ctx.moveTo(7.5, 15)
-		ctx.lineTo(-7.5, 15)
-		ctx.lineTo(-7.5, 0)
-		ctx.lineTo(-22.5, 0)
-		ctx.lineTo(-22.5, -15)
-		ctx.lineTo(22.5, -15)
-		ctx.lineTo(22.5, 0)
-		ctx.lineTo(7.5, 0)
+		ctx.moveTo(7.5 * scale, 15 * scale)
+		ctx.lineTo(-7.5 * scale, 15 * scale)
+		ctx.lineTo(-7.5 * scale, 0)
+		ctx.lineTo(-22.5 * scale, 0)
+		ctx.lineTo(-22.5 * scale, -15 * scale)
+		ctx.lineTo(22.5 * scale, -15 * scale)
+		ctx.lineTo(22.5 * scale, 0)
+		ctx.lineTo(7.5 * scale, 0)
 		ctx.closePath()
 	} else {
-		ctx.rect(-22.5, -15, 45, 30)
+		ctx.rect(-22.5 * scale, -15 * scale, 45 * scale, 30 * scale)
 	}
 	ctx.fill()
 
 	// 绘制文字
 	ctx.fillStyle = '#ffffff'
-	ctx.font = '10px sans-serif'
+	ctx.font = `${Math.round(10 * scale)}px sans-serif`
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 
-	// 1. 连线到控制按钮 (实线，与物体同色)
-	ctx.strokeStyle = color
-	ctx.lineWidth = 1
-	ctx.beginPath()
-	ctx.moveTo(0, -15)
-	ctx.lineTo(0, -30)
-	ctx.moveTo(0, 15)
-	ctx.lineTo(0, 30)
-	ctx.stroke()
+	if (isActive) {
+		// 1. 连线到控制按钮 (实线，与物体同色)
+		ctx.strokeStyle = color
+		ctx.lineWidth = 1
+		ctx.beginPath()
+		ctx.moveTo(0, -15 * scale)
+		ctx.lineTo(0, -30 * scale)
+		ctx.moveTo(0, 15 * scale)
+		ctx.lineTo(0, 30 * scale)
+		ctx.stroke()
 
-	// 2. 绘制旋转和移动按钮
-	renderControlIcon(ctx, 0, 30, 'drag', color)
-	renderControlIcon(ctx, 0, -30, 'rotate', color)
+		// 2. 绘制旋转和移动按钮
+		renderControlIcon(ctx, 0, 30 * scale, 'drag', color)
+		renderControlIcon(ctx, 0, -30 * scale, 'rotate', color)
+
+		// 3. 绘制 4 个角上的小正方形缩放手柄
+		ctx.fillStyle = '#FFFFFF'
+		ctx.strokeStyle = color
+		ctx.lineWidth = 1
+		const size = 5.0
+		const clx = [-22.5 * scale, 22.5 * scale, 22.5 * scale, -22.5 * scale]
+		const cly = [-15 * scale, -15 * scale, 15 * scale, 15 * scale]
+		for (let i = 0; i < 4; i++) {
+			ctx.fillRect(clx[i] - size / 2.0, cly[i] - size / 2.0, size, size)
+			ctx.strokeRect(clx[i] - size / 2.0, cly[i] - size / 2.0, size, size)
+		}
+	}
 
 	ctx.restore()
 }
@@ -285,7 +244,8 @@ export function drawDoor(
 	width: number,
 	thickness: number,
 	isDragging: boolean,
-	isRotating: boolean
+	isRotating: boolean,
+	isActive: boolean
 ) {
 	ctx.save()
 	ctx.translate(doorX, doorY)
@@ -295,19 +255,31 @@ export function drawDoor(
 	ctx.fillStyle = COLOR_DOOR
 	ctx.fillRect(-width / 2, -thickness / 2, width, thickness)
 
-	// 1. 连线到旋转和移动按钮 (实线，与大门同色)
-	ctx.strokeStyle = COLOR_DOOR
-	ctx.lineWidth = 1
-	ctx.beginPath()
-	ctx.moveTo(0, -thickness / 2)
-	ctx.lineTo(0, -20)
-	ctx.moveTo(0, thickness / 2)
-	ctx.lineTo(0, 20)
-	ctx.stroke()
+	if (isActive) {
+		// 1. 连线到旋转和移动按钮 (实线，与大门同色)
+		ctx.strokeStyle = COLOR_DOOR
+		ctx.lineWidth = 1
+		ctx.beginPath()
+		ctx.moveTo(0, -thickness / 2)
+		ctx.lineTo(0, -20)
+		ctx.moveTo(0, thickness / 2)
+		ctx.lineTo(0, 20)
+		ctx.stroke()
 
-	// 2. 绘制旋转和移动按钮
-	renderControlIcon(ctx, 0, 20, 'drag', COLOR_DOOR)
-	renderControlIcon(ctx, 0, -20, 'rotate', COLOR_DOOR)
+		// 2. 绘制旋转和移动按钮
+		renderControlIcon(ctx, 0, 20, 'drag', COLOR_DOOR)
+		renderControlIcon(ctx, 0, -20, 'rotate', COLOR_DOOR)
+
+		// 3. 绘制左右两端拉伸手柄 (小正方形)
+		ctx.fillStyle = '#FFFFFF'
+		ctx.strokeStyle = COLOR_DOOR
+		ctx.lineWidth = 1
+		const size = 5.0
+		ctx.fillRect(-width / 2.0 - size / 2.0, -size / 2.0, size, size)
+		ctx.strokeRect(-width / 2.0 - size / 2.0, -size / 2.0, size, size)
+		ctx.fillRect(width / 2.0 - size / 2.0, -size / 2.0, size, size)
+		ctx.strokeRect(width / 2.0 - size / 2.0, -size / 2.0, size, size)
+	}
 
 	ctx.restore()
 }
@@ -511,6 +483,8 @@ export function drawLegends(
 
 	ctx.restore()
 }
+
+
 
 
 

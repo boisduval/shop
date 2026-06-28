@@ -7,7 +7,8 @@
 
 <script setup lang="uts">
 	import { ref, watch, PropType, getCurrentInstance, onMounted } from 'vue'
-	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, getDoorRotationHandlePos, drawLegends, COLOR_CABINET } from '../../utils/canvasUtils'
+	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, drawLegends, COLOR_CABINET } from '../../utils/canvasUtils'
+	import { getDoorRotationHandlePos } from '../../utils/controlUtils'
 
 	const props = defineProps({
 		canvasId: {
@@ -46,6 +47,7 @@
 	const doorThickness = ref(6.0)
 	const isDragging = ref(false)
 	const isRotating = ref(false)
+	const isScalingDoor = ref(false)
 	const isDoorInitialized = ref(false)
 	const isDoorManuallyPlaced = ref(false)
 
@@ -53,12 +55,24 @@
 	const cabinetX = ref(150.0)
 	const cabinetY = ref(150.0)
 	const cabinetAngle = ref(0.0)
+	const cabinetScale = ref(1.0)
 	const isDraggingCabinet = ref(false)
 	const isRotatingCabinet = ref(false)
+	const isScalingCabinet = ref(false)
 	const isCabinetInitialized = ref(false)
 
 	const dragStartOffsetX = ref(0.0)
 	const dragStartOffsetY = ref(0.0)
+
+	// 选中/激活的对象类型 ('none' | 'door' | 'cabinet')
+	const activeObjectType = ref('none')
+
+	// 缩放定位锚点
+	const anchorX = ref(0.0)
+	const anchorY = ref(0.0)
+	const draggedCornerIndex = ref(0)
+	const draggedDoorEnd = ref(0)
+
 
 	const instance = getCurrentInstance()!.proxy
 
@@ -163,7 +177,9 @@
 				props.cabinetStyle,
 				COLOR_CABINET,
 				isDraggingCabinet.value,
-				isRotatingCabinet.value
+				isRotatingCabinet.value,
+				cabinetScale.value,
+				activeObjectType.value === 'cabinet'
 			)
 		}
 
@@ -176,7 +192,8 @@
 				doorWidth.value,
 				doorThickness.value,
 				isDragging.value,
-				isRotating.value
+				isRotating.value,
+				activeObjectType.value === 'door'
 			)
 		}
 
@@ -189,46 +206,111 @@
 		const tx = touch.x
 		const ty = touch.y
 
-		// 1. 检测大门手势
-		const rp = getDoorRotationHandlePos(doorX.value, doorY.value, doorAngle.value, doorWidth.value)
-		const rx = rp.x
-		const ry = rp.y
-
-		const dAngle = doorAngle.value
-		const dx_drag = doorX.value - 20.0 * Math.sin(dAngle)
-		const dy_drag = doorY.value + 20.0 * Math.cos(dAngle)
-
-		const distMove = Math.sqrt((tx - dx_drag) * (tx - dx_drag) + (ty - dy_drag) * (ty - dy_drag))
-		const distBody = Math.sqrt((tx - doorX.value) * (tx - doorX.value) + (ty - doorY.value) * (ty - doorY.value))
-		const distRotate = Math.sqrt((tx - rx) * (tx - rx) + (ty - ry) * (ty - ry))
-
-		if (distRotate < 25) {
-			isRotating.value = true
-			return
-		} else if (distMove < 25 || distBody < 25) {
-			isDragging.value = true
-			return
+		// 1. 如果大门已选中，检测其特有的手持控制（旋转、拉伸）
+		if (activeObjectType.value === 'door') {
+			const rp = getDoorRotationHandlePos(doorX.value, doorY.value, doorAngle.value, doorWidth.value)
+			const rx = rp.x
+			const ry = rp.y
+			const distRotate = Math.sqrt((tx - rx) * (tx - rx) + (ty - ry) * (ty - ry))
+			
+			if (distRotate < 25) {
+				isRotating.value = true
+				return
+			}
+			
+			const dAngle = doorAngle.value
+			const dw = doorWidth.value
+			const dlx1 = -dw / 2.0
+			const dlx2 = dw / 2.0
+			const dgx1 = doorX.value + dlx1 * Math.cos(dAngle)
+			const dgy1 = doorY.value + dlx1 * Math.sin(dAngle)
+			const dgx2 = doorX.value + dlx2 * Math.cos(dAngle)
+			const dgy2 = doorY.value + dlx2 * Math.sin(dAngle)
+			
+			const distDoorL = Math.sqrt((tx - dgx1) * (tx - dgx1) + (ty - dgy1) * (ty - dgy1))
+			const distDoorR = Math.sqrt((tx - dgx2) * (tx - dgx2) + (ty - dgy2) * (ty - dgy2))
+			
+			if (distDoorL < 20) {
+				isScalingDoor.value = true
+				draggedDoorEnd.value = 0
+				anchorX.value = dgx2
+				anchorY.value = dgy2
+				return
+			} else if (distDoorR < 20) {
+				isScalingDoor.value = true
+				draggedDoorEnd.value = 1
+				anchorX.value = dgx1
+				anchorY.value = dgy1
+				return
+			}
 		}
 
-		// 2. 检测烟柜手势
-		if (isCabinetInitialized.value) {
+		// 2. 如果烟柜已选中，检测其特有的控制（旋转、四角等比缩放、拉手移动）
+		if (activeObjectType.value === 'cabinet' && isCabinetInitialized.value) {
 			const cAngle = cabinetAngle.value
-			const cDragX = cabinetX.value - 30.0 * Math.sin(cAngle)
-			const cDragY = cabinetY.value + 30.0 * Math.cos(cAngle)
-			const cRotX = cabinetX.value + 30.0 * Math.sin(cAngle)
-			const cRotY = cabinetY.value - 30.0 * Math.cos(cAngle)
+			const cs = cabinetScale.value
 
+			const cDragX = cabinetX.value - 30.0 * cs * Math.sin(cAngle)
+			const cDragY = cabinetY.value + 30.0 * cs * Math.cos(cAngle)
+			const cRotX = cabinetX.value + 30.0 * cs * Math.sin(cAngle)
+			const cRotY = cabinetY.value - 30.0 * cs * Math.cos(cAngle)
+			
 			const distCabinetMove = Math.sqrt((tx - cDragX) * (tx - cDragX) + (ty - cDragY) * (ty - cDragY))
 			const distCabinetRotate = Math.sqrt((tx - cRotX) * (tx - cRotX) + (ty - cRotY) * (ty - cRotY))
-			const distCabinetBody = Math.sqrt((tx - cabinetX.value) * (tx - cabinetX.value) + (ty - cabinetY.value) * (ty - cabinetY.value))
-
+			
 			if (distCabinetRotate < 25) {
 				isRotatingCabinet.value = true
-			} else if (distCabinetMove < 25 || distCabinetBody < 30) {
+				return
+			} else if (distCabinetMove < 25) {
 				isDraggingCabinet.value = true
 				dragStartOffsetX.value = tx - cabinetX.value
 				dragStartOffsetY.value = ty - cabinetY.value
+				return
 			}
+
+			// 检查 4 个角上的小正方形手柄
+			const clx = [-22.5 * cs, 22.5 * cs, 22.5 * cs, -22.5 * cs]
+			const cly = [-15 * cs, -15 * cs, 15 * cs, 15 * cs]
+			for (let i = 0; i < 4; i++) {
+				const cgx = cabinetX.value + clx[i] * Math.cos(cAngle) - cly[i] * Math.sin(cAngle)
+				const cgy = cabinetY.value + clx[i] * Math.sin(cAngle) + cly[i] * Math.cos(cAngle)
+				const distCorner = Math.sqrt((tx - cgx) * (tx - cgx) + (ty - cgy) * (ty - cgy))
+				if (distCorner < 20) {
+					isScalingCabinet.value = true
+					draggedCornerIndex.value = i
+					const oppIdx = (i + 2) % 4
+					anchorX.value = cabinetX.value + clx[oppIdx] * Math.cos(cAngle) - cly[oppIdx] * Math.sin(cAngle)
+					anchorY.value = cabinetY.value + clx[oppIdx] * Math.sin(cAngle) + cly[oppIdx] * Math.cos(cAngle)
+					return
+				}
+			}
+		}
+
+		// 3. 都没有选中手柄，检测点击物体本体激活选中
+		const distDoorBody = Math.sqrt((tx - doorX.value) * (tx - doorX.value) + (ty - doorY.value) * (ty - doorY.value))
+		if (distDoorBody < 25.0) {
+			activeObjectType.value = 'door'
+			isDragging.value = true
+			draw()
+			return
+		}
+
+		if (isCabinetInitialized.value) {
+			const distCabinetBody = Math.sqrt((tx - cabinetX.value) * (tx - cabinetX.value) + (ty - cabinetY.value) * (ty - cabinetY.value))
+			if (distCabinetBody < 30.0) {
+				activeObjectType.value = 'cabinet'
+				isDraggingCabinet.value = true
+				dragStartOffsetX.value = tx - cabinetX.value
+				dragStartOffsetY.value = ty - cabinetY.value
+				draw()
+				return
+			}
+		}
+
+		// 点击空白处，清除选中状态
+		if (activeObjectType.value !== 'none') {
+			activeObjectType.value = 'none'
+			draw()
 		}
 	}
 
@@ -262,6 +344,15 @@
 			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
 			doorAngle.value = rawAngle
 			draw()
+		} else if (isScalingDoor.value) {
+			isDoorManuallyPlaced.value = true
+			const dist = Math.sqrt((tx - anchorX.value) * (tx - anchorX.value) + (ty - anchorY.value) * (ty - anchorY.value))
+			doorWidth.value = Math.max(20.0, dist)
+			const dAngle = doorAngle.value
+			const offsetFactor = (draggedDoorEnd.value == 0) ? -0.5 : 0.5
+			doorX.value = anchorX.value + offsetFactor * doorWidth.value * Math.cos(dAngle)
+			doorY.value = anchorY.value + offsetFactor * doorWidth.value * Math.sin(dAngle)
+			draw()
 		} else if (isDraggingCabinet.value) {
 			cabinetX.value = tx - dragStartOffsetX.value
 			cabinetY.value = ty - dragStartOffsetY.value
@@ -272,14 +363,32 @@
 			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
 			cabinetAngle.value = rawAngle
 			draw()
+		} else if (isScalingCabinet.value) {
+			const dist = Math.sqrt((tx - anchorX.value) * (tx - anchorX.value) + (ty - anchorY.value) * (ty - anchorY.value))
+			const initialDiag = 54.08325
+			const cs = Math.max(0.4, dist / initialDiag)
+			cabinetScale.value = cs
+
+			const cAngle = cabinetAngle.value
+			const oppIdx = (draggedCornerIndex.value + 2) % 4
+			const clx_unscaled = [-22.5, 22.5, 22.5, -22.5]
+			const cly_unscaled = [-15.0, -15.0, 15.0, 15.0]
+			const alx_unscaled = clx_unscaled[oppIdx]
+			const aly_unscaled = cly_unscaled[oppIdx]
+
+			cabinetX.value = anchorX.value - cs * (alx_unscaled * Math.cos(cAngle) - aly_unscaled * Math.sin(cAngle))
+			cabinetY.value = anchorY.value - cs * (alx_unscaled * Math.sin(cAngle) + aly_unscaled * Math.cos(cAngle))
+			draw()
 		}
 	}
 
 	const onTouchEnd = () => {
 		isDragging.value = false
 		isRotating.value = false
+		isScalingDoor.value = false
 		isDraggingCabinet.value = false
 		isRotatingCabinet.value = false
+		isScalingCabinet.value = false
 	}
 
 	// 暴露一个绘制方法给父组件
