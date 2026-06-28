@@ -1,7 +1,7 @@
 <template>
 	<view class="canvas-container">
-		<canvas :id="canvasId" class="canvas" type="2d"
-			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd"></canvas>
+		<canvas :id="canvasId" :canvas-id="canvasId" class="canvas" @touchstart="onTouchStart" @touchmove="onTouchMove"
+			@touchend="onTouchEnd"></canvas>
 	</view>
 </template>
 
@@ -25,7 +25,7 @@
 		},
 		// 允许子组件传入一个自定义绘制函数，让不同形状组件调用本基础组件来绘图
 		drawFn: {
-			type: Function as PropType<(ctx: CanvasRenderingContext2D, width: number, height: number) => void>,
+			type: Function as PropType<(ctx : CanvasRenderingContext2D, width : number, height : number) => void>,
 			required: true
 		},
 		vertices: {
@@ -83,7 +83,7 @@
 			success: (context : CanvasContext) => {
 				canvasCtx = context.getContext('2d')!
 				const canvas = canvasCtx!.canvas
-				const dpr = uni.getWindowInfo().pixelRatio
+				const dpr = uni.getDeviceInfo().devicePixelRatio ?? 1;
 				canvas.width = canvas.offsetWidth * dpr
 				canvas.height = canvas.offsetHeight * dpr
 				canvasWidth.value = canvas.width
@@ -212,12 +212,12 @@
 			const rx = rp.x
 			const ry = rp.y
 			const distRotate = Math.sqrt((tx - rx) * (tx - rx) + (ty - ry) * (ty - ry))
-			
+
 			if (distRotate < 25) {
 				isRotating.value = true
 				return
 			}
-			
+
 			const dAngle = doorAngle.value
 			const dw = doorWidth.value
 			const dlx1 = -dw / 2.0
@@ -226,10 +226,10 @@
 			const dgy1 = doorY.value + dlx1 * Math.sin(dAngle)
 			const dgx2 = doorX.value + dlx2 * Math.cos(dAngle)
 			const dgy2 = doorY.value + dlx2 * Math.sin(dAngle)
-			
+
 			const distDoorL = Math.sqrt((tx - dgx1) * (tx - dgx1) + (ty - dgy1) * (ty - dgy1))
 			const distDoorR = Math.sqrt((tx - dgx2) * (tx - dgx2) + (ty - dgy2) * (ty - dgy2))
-			
+
 			if (distDoorL < 20) {
 				isScalingDoor.value = true
 				draggedDoorEnd.value = 0
@@ -254,10 +254,10 @@
 			const cDragY = cabinetY.value + 30.0 * cs * Math.cos(cAngle)
 			const cRotX = cabinetX.value + 30.0 * cs * Math.sin(cAngle)
 			const cRotY = cabinetY.value - 30.0 * cs * Math.cos(cAngle)
-			
+
 			const distCabinetMove = Math.sqrt((tx - cDragX) * (tx - cDragX) + (ty - cDragY) * (ty - cDragY))
 			const distCabinetRotate = Math.sqrt((tx - cRotX) * (tx - cRotX) + (ty - cRotY) * (ty - cRotY))
-			
+
 			if (distCabinetRotate < 25) {
 				isRotatingCabinet.value = true
 				return
@@ -402,9 +402,49 @@
 		isScalingCabinet.value = false
 	}
 
-	// 暴露一个绘制方法给父组件
+	const exportImage = (callback : (path : string) => void) => {
+		if (activeObjectType.value !== 'none') {
+			activeObjectType.value = 'none'
+			draw()
+		}
+		const ctx = canvasCtx
+		if (ctx == null) {
+			callback('')
+			return
+		}
+		setTimeout(() => {
+			uni.createSelectorQuery()
+				.in(instance)
+				.select('#' + props.canvasId)
+				.fields({ node: true } as Record<string, any>)
+				.exec((res : any[]) => {
+					if (res.length > 0 && res[0] != null) {
+						const canvasNode = res[0]['node']
+						if (canvasNode != null) {
+							uni.canvasToTempFilePath({
+								canvas: canvasNode,
+								success: (res2) => {
+									callback(res2.tempFilePath)
+								},
+								fail: (err) => {
+									console.error('canvasToTempFilePath fail:', err)
+									callback('')
+								}
+							}, instance)
+							return
+						}
+					}
+					console.error('Failed to select canvas node')
+					callback('')
+				})
+
+		}, 100)
+	}
+
+	// 暴露一个绘制和图片导出方法给父组件
 	defineExpose({
-		redraw: draw
+		redraw: draw,
+		exportImage: exportImage
 	})
 </script>
 

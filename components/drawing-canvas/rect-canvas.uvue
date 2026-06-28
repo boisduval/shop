@@ -89,4 +89,14 @@
 			baseCanvasRef.value!.$callMethod('redraw')
 		}
 	}, { deep: true })
+
+	defineExpose({
+		exportImage: (callback: (path: string) => void) => {
+			if (baseCanvasRef.value != null) {
+				baseCanvasRef.value!.$callMethod('exportImage', callback)
+			} else {
+				callback('')
+			}
+		}
+	})
 </script>

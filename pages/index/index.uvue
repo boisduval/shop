@@ -8,11 +8,11 @@
 
 		<!-- 步骤 1 的非滚动 Canvas 画布区域 (参考官方示例，放在滚动区域外) -->
 		<view v-show="activeStep === 1" class="preview-container preview-container-edit grid-bg">
-			<rect-canvas v-if="selectedShape === 'rect'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
+			<rect-canvas ref="rectCanvasRef" v-if="selectedShape === 'rect'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
 				:active-step="activeStep" @update:area="onAreaUpdate"></rect-canvas>
-			<trap-canvas v-if="selectedShape === 'trap'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
+			<trap-canvas ref="trapCanvasRef" v-if="selectedShape === 'trap'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
 				:active-step="activeStep" @update:area="onAreaUpdate"></trap-canvas>
-			<free-canvas v-if="selectedShape === 'free'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
+			<free-canvas ref="freeCanvasRef" v-if="selectedShape === 'free'" :cabinet-style="selectedCabinetStyle" :params="drawingParams"
 				:active-step="activeStep" @update:area="onAreaUpdate"></free-canvas>
 		</view>
 
@@ -75,6 +75,10 @@
 		trapOffset: 10
 	})
 
+	const rectCanvasRef = ref<ComponentPublicInstance | null>(null)
+	const trapCanvasRef = ref<ComponentPublicInstance | null>(null)
+	const freeCanvasRef = ref<ComponentPublicInstance | null>(null)
+	const exportedDrawingImage = ref('')
 	const currentArea = ref(1200.0)
 
 	// 计算选中的模板名称
@@ -93,7 +97,7 @@
 	const drawingData = computed(() => {
 		return {
 			calculatedArea: currentArea.value,
-			image: '/static/bg.png' // 使用背景图来做预览图的占位展示
+			image: exportedDrawingImage.value
 		}
 	})
 
@@ -119,7 +123,32 @@
 	}
 
 	const nextStep = () => {
-		if (activeStep.value < 2) {
+		if (activeStep.value === 1) {
+			uni.showLoading({
+				title: '生成平面图中...'
+			})
+			let activeCanvasRef : any = null
+			if (selectedShape.value === 'rect') {
+				activeCanvasRef = rectCanvasRef.value
+			} else if (selectedShape.value === 'trap') {
+				activeCanvasRef = trapCanvasRef.value
+			} else if (selectedShape.value === 'free') {
+				activeCanvasRef = freeCanvasRef.value
+			}
+
+			if (activeCanvasRef != null) {
+				activeCanvasRef.$callMethod('exportImage', (path : string) => {
+					uni.hideLoading()
+					if (path !== '') {
+						exportedDrawingImage.value = path
+					}
+					activeStep.value++
+				})
+			} else {
+				uni.hideLoading()
+				activeStep.value++
+			}
+		} else if (activeStep.value < 2) {
 			activeStep.value++
 		} else {
 			exportReport()
