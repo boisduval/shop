@@ -383,6 +383,17 @@
 	}
 
 	const onTouchEnd = () => {
+		if (isRotating.value && props.vertices.length >= 3) {
+			const segments = generateWallSegments(props.vertices)
+			const snapRes = snapDoorToWall({ x: doorX.value, y: doorY.value } as Point, segments, 999999.0)
+			if (snapRes['isSnapped'] as boolean) {
+				doorX.value = snapRes['x'] as number
+				doorY.value = snapRes['y'] as number
+				doorAngle.value = snapRes['angle'] as number
+				draw()
+			}
+		}
+
 		isDragging.value = false
 		isRotating.value = false
 		isScalingDoor.value = false
