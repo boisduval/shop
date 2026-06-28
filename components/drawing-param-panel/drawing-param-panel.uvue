@@ -25,7 +25,7 @@
 				<text class="slider-label">位置调节</text>
 				<view class="slider-wrapper">
 					<slider :value="modelValue['trapOffset']" :min="-100" :max="100" active-color="#3B66F5"
-						background-color="#e2e8f0" block-size="18" @change="onSliderChange" />
+						background-color="#e2e8f0" block-size="18" @change="onSliderChange" @changing="onSliderChanging" />
 				</view>
 			</view>
 			<view class="glass-card-form param-card">
@@ -81,7 +81,27 @@
 		}
 	}
 
+	let debounceTimer : number | null = null
+
+	const updateOffsetDebounced = (val : number) => {
+		if (debounceTimer != null) {
+			clearTimeout(debounceTimer)
+		}
+		debounceTimer = setTimeout(() => {
+			const newVal = { ...props.modelValue }
+			newVal['trapOffset'] = val
+			emit('update:modelValue', newVal)
+		}, 10)
+	}
+
+	const onSliderChanging = (e : UniSliderChangeEvent) => {
+		updateOffsetDebounced(e.detail.value)
+	}
+
 	const onSliderChange = (e : UniSliderChangeEvent) => {
+		if (debounceTimer != null) {
+			clearTimeout(debounceTimer)
+		}
 		const newVal = { ...props.modelValue }
 		newVal['trapOffset'] = e.detail.value
 		emit('update:modelValue', newVal)

@@ -72,7 +72,7 @@
 		trapTop: 30,
 		trapBottom: 50,
 		trapH: 30,
-		trapOffset: 0
+		trapOffset: 10
 	})
 
 	const currentArea = ref(1200.0)
