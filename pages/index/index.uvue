@@ -6,7 +6,23 @@
 		<!-- 头部区域 (AppHeader) -->
 		<app-header :active-step="activeStep" :selected-template="selectedTemplateName" :steps="steps"></app-header>
 
-		<!-- 中间滚动内容区域 (Content Box) -->
+		<!-- 步骤 1 的非滚动 Canvas 画布区域 (参考官方示例，放在滚动区域外) -->
+		<view v-show="activeStep === 1" class="preview-container preview-container-edit grid-bg">
+			<rect-canvas v-if="selectedShape === 'rect'"
+				:cabinet-style="selectedCabinetStyle"
+				:params="drawingParams" :active-step="activeStep"
+				@update:area="onAreaUpdate"></rect-canvas>
+			<trap-canvas v-if="selectedShape === 'trap'"
+				:cabinet-style="selectedCabinetStyle"
+				:params="drawingParams" :active-step="activeStep"
+				@update:area="onAreaUpdate"></trap-canvas>
+			<free-canvas v-if="selectedShape === 'free'"
+				:cabinet-style="selectedCabinetStyle"
+				:params="drawingParams" :active-step="activeStep"
+				@update:area="onAreaUpdate"></free-canvas>
+		</view>
+
+		<!-- 中间滚动/内容区域 -->
 		<scroll-view class="content-scroll" :scroll-y="true">
 			<view class="content-inner">
 
@@ -17,7 +33,7 @@
 					</view>
 				</view>
 
-				<!-- 步骤 1：绘制平面图 -->
+				<!-- 步骤 1：参数输入与配置区 -->
 				<view v-show="activeStep === 1" class="step-content">
 					<view class="selector-wrapper">
 						<room-shape-selector v-model="selectedShape"></room-shape-selector>
@@ -25,23 +41,7 @@
 					<view class="selector-wrapper mt-3">
 						<cabinet-style-selector v-model="selectedCabinetStyle"></cabinet-style-selector>
 					</view>
-					<view class="preview-container preview-container-edit grid-bg">
-						<rect-canvas v-if="selectedShape === 'rect'"
-							:cabinet-style="selectedCabinetStyle"
-							:params="drawingParams" :active-step="activeStep"
-							@update:area="onAreaUpdate"></rect-canvas>
-						<trap-canvas v-if="selectedShape === 'trap'"
-							:cabinet-style="selectedCabinetStyle"
-							:params="drawingParams" :active-step="activeStep"
-							@update:area="onAreaUpdate"></trap-canvas>
-						<free-canvas v-if="selectedShape === 'free'"
-							:cabinet-style="selectedCabinetStyle"
-							:params="drawingParams" :active-step="activeStep"
-							@update:area="onAreaUpdate"></free-canvas>
-					</view>
-
 					<drawing-param-panel :shapeType="selectedShape" v-model="drawingParams"></drawing-param-panel>
-
 				</view>
 
 				<!-- 步骤 2：填写表单 -->
@@ -155,6 +155,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
+		overflow: hidden;
 	}
 
 	.bg-image {

@@ -1,6 +1,6 @@
 <template>
 	<view class="canvas-container">
-		<canvas :id="canvasId" class="canvas"></canvas>
+		<canvas :id="canvasId" class="canvas" type="2d"></canvas>
 	</view>
 </template>
 
