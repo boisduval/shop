@@ -381,7 +381,7 @@
 			cabinetAngle.value = rawAngle
 			draw()
 		} else if (isScalingCabinet.value) {
-			const cabRes = calculateCabinetScaleAndPos(tx, ty, anchorX.value, anchorY.value, cabinetAngle.value, draggedCornerIndex.value)
+			const cabRes = calculateCabinetScaleAndPos(tx, ty, anchorX.value, anchorY.value, cabinetAngle.value, draggedCornerIndex.value, props.cabinetStyle)
 			cabinetX.value = cabRes['x'] as number
 			cabinetY.value = cabRes['y'] as number
 			cabinetScale.value = cabRes['scale'] as number

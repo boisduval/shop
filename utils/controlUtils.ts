@@ -188,15 +188,24 @@ export function calculateCabinetScaleAndPos(
 	anchorX: number,
 	anchorY: number,
 	cabinetAngle: number,
-	draggedCornerIndex: number
+	draggedCornerIndex: number,
+	type: string
 ): Record<string, number> {
 	const dist = Math.sqrt((tx - anchorX) * (tx - anchorX) + (ty - anchorY) * (ty - anchorY))
-	const initialDiag = 54.08325
+	
+	let halfW = 22.5
+	let halfH = 15.0
+	if (type === 'l_shape' || type === 'l_shape_mirror') {
+		halfW = 25.0
+		halfH = 15.0
+	}
+	
+	const initialDiag = Math.sqrt(halfW * halfW + halfH * halfH) * 2.0
 	const cs = Math.max(0.4, dist / initialDiag)
 
 	const oppIdx = (draggedCornerIndex + 2) % 4
-	const clx_unscaled = [-22.5, 22.5, 22.5, -22.5]
-	const cly_unscaled = [-15.0, -15.0, 15.0, 15.0]
+	const clx_unscaled = [-halfW, halfW, halfW, -halfW]
+	const cly_unscaled = [-halfH, -halfH, halfH, halfH]
 	const alx_unscaled = clx_unscaled[oppIdx]
 	const aly_unscaled = cly_unscaled[oppIdx]
 

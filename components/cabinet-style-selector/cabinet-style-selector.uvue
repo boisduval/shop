@@ -29,8 +29,8 @@
 
 	const options : CabinetOption[] = [
 		{ label: '默认烟柜', value: 'default' },
-		{ label: 'L型烟柜', value: 'l-shape' },
-		{ label: '凸字型烟柜', value: 't-shape' }
+		{ label: 'L型烟柜', value: 'l_shape' },
+		{ label: '反L型烟柜', value: 'l_shape_mirror' }
 	]
 
 	const selectStyle = (value : string) => {
