@@ -141,7 +141,7 @@
 	}
 
 	.preview-container-edit {
-		margin: 16px;
+		margin: 16px 16px 0;
 		width: calc(100% - 32px);
 		border-radius: 16px;
 		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);

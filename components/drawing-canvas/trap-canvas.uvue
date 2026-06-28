@@ -1,5 +1,5 @@
 <template>
-	<base-shape-canvas ref="baseCanvasRef" canvas-id="trapCanvas" :active-step="activeStep" :draw-fn="drawTrap"></base-shape-canvas>
+	<base-shape-canvas ref="baseCanvasRef" canvas-id="trapCanvas" :active-step="activeStep" :draw-fn="drawTrap" :vertices="roomVertices" :cabinet-style="cabinetStyle"></base-shape-canvas>
 </template>
 
 <script setup lang="uts">
@@ -96,9 +96,6 @@
 
 		// 面积数据标注
 		drawAreaText(ctx, calculatedAreaValue.value, width, height)
-
-		// 4. 绘制烟柜与大门 (模拟摆放)
-		drawFurniture(ctx, vertices, width, height)
 	}
 
 	watch([() => props.params, () => props.cabinetStyle], () => {

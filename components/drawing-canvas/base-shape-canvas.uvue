@@ -1,11 +1,13 @@
 <template>
 	<view class="canvas-container">
-		<canvas :id="canvasId" class="canvas" type="2d"></canvas>
+		<canvas :id="canvasId" class="canvas" type="2d"
+			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd"></canvas>
 	</view>
 </template>
 
 <script setup lang="uts">
 	import { ref, watch, PropType, getCurrentInstance, onMounted } from 'vue'
+	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, getDoorRotationHandlePos } from '../../utils/canvasUtils'
 
 	const props = defineProps({
 		canvasId: {
@@ -16,16 +18,47 @@
 			type: Number,
 			required: true
 		},
+		cabinetStyle: {
+			type: String,
+			required: true
+		},
 		// 允许子组件传入一个自定义绘制函数，让不同形状组件调用本基础组件来绘图
 		drawFn: {
 			type: Function as PropType<(ctx: CanvasRenderingContext2D, width: number, height: number) => void>,
 			required: true
+		},
+		vertices: {
+			type: Array as PropType<Point[]>,
+			required: false,
+			default: () => [] as Point[]
 		}
 	})
 
 	let canvasCtx : CanvasRenderingContext2D | null = null
 	const canvasWidth = ref(300.0)
 	const canvasHeight = ref(300.0)
+
+	// 大门交互状态
+	const doorX = ref(0.0)
+	const doorY = ref(0.0)
+	const doorAngle = ref(0.0)
+	const doorWidth = ref(40.0)
+	const doorThickness = ref(6.0)
+	const isDragging = ref(false)
+	const isRotating = ref(false)
+	const isDoorInitialized = ref(false)
+	const isDoorManuallyPlaced = ref(false)
+
+	// 烟柜交互状态
+	const cabinetX = ref(150.0)
+	const cabinetY = ref(150.0)
+	const cabinetAngle = ref(0.0)
+	const isDraggingCabinet = ref(false)
+	const isRotatingCabinet = ref(false)
+	const isCabinetInitialized = ref(false)
+
+	const dragStartOffsetX = ref(0.0)
+	const dragStartOffsetY = ref(0.0)
 
 	const instance = getCurrentInstance()!.proxy
 
@@ -42,9 +75,47 @@
 				canvasWidth.value = canvas.width
 				canvasHeight.value = canvas.height
 				canvasCtx!.scale(dpr, dpr)
+				if (props.vertices.length >= 3 && !isDoorInitialized.value) {
+					initDoor()
+				}
+				if (!isCabinetInitialized.value) {
+					initCabinet()
+				}
 				draw()
 			}
 		})
+	}
+
+	const initCabinet = () => {
+		cabinetX.value = 150.0
+		cabinetY.value = 150.0
+		cabinetAngle.value = 0.0
+		isCabinetInitialized.value = true
+	}
+
+	const initDoor = () => {
+		if (props.vertices.length < 4) return
+		const pbl = props.vertices[3]
+		const pbr = props.vertices[2]
+		const dx = pbr.x - pbl.x
+		const dy = pbr.y - pbl.y
+		const len = Math.sqrt(dx * dx + dy * dy)
+
+		if (len > 0) {
+			const w = len / 3.0
+			doorWidth.value = w
+			const ux = dx / len
+			const uy = dy / len
+			doorX.value = pbl.x + ux * (w / 2.0)
+			doorY.value = pbl.y + uy * (w / 2.0)
+			doorAngle.value = Math.atan2(dy, dx)
+		} else {
+			doorWidth.value = 40.0
+			doorX.value = pbl.x
+			doorY.value = pbl.y
+			doorAngle.value = 0.0
+		}
+		isDoorInitialized.value = true
 	}
 
 	onMounted(() => {
@@ -63,12 +134,149 @@
 		}
 	})
 
+	watch(() => props.cabinetStyle, () => {
+		draw()
+	})
+
+	watch(() => props.vertices, (newVertices) => {
+		if (newVertices.length >= 3) {
+			if (!isDoorInitialized.value || !isDoorManuallyPlaced.value) {
+				initDoor()
+			}
+			draw()
+		}
+	}, { deep: true })
+
 	const draw = () => {
 		const ctx = canvasCtx
 		if (ctx == null) return
 		const canvas = ctx.canvas
 		// 传递 css 逻辑宽高，而不是乘以 dpr 后的物理像素宽高
 		props.drawFn(ctx, canvas.offsetWidth, canvas.offsetHeight)
+
+		if (isCabinetInitialized.value) {
+			drawCabinet(
+				ctx,
+				cabinetX.value,
+				cabinetY.value,
+				cabinetAngle.value,
+				props.cabinetStyle,
+				'#B57474',
+				isDraggingCabinet.value,
+				isRotatingCabinet.value
+			)
+		}
+
+		if (isDoorInitialized.value) {
+			drawDoor(
+				ctx,
+				doorX.value,
+				doorY.value,
+				doorAngle.value,
+				doorWidth.value,
+				doorThickness.value,
+				isDragging.value,
+				isRotating.value
+			)
+		}
+	}
+
+	const onTouchStart = (e : TouchEvent) => {
+		if (e.touches.length === 0 || !isDoorInitialized.value) return
+		const touch = e.touches[0]
+		const tx = touch.x
+		const ty = touch.y
+
+		// 1. 检测大门手势
+		const rp = getDoorRotationHandlePos(doorX.value, doorY.value, doorAngle.value, doorWidth.value)
+		const rx = rp.x
+		const ry = rp.y
+
+		const dAngle = doorAngle.value
+		const dx_drag = doorX.value - 20.0 * Math.sin(dAngle)
+		const dy_drag = doorY.value + 20.0 * Math.cos(dAngle)
+
+		const distMove = Math.sqrt((tx - dx_drag) * (tx - dx_drag) + (ty - dy_drag) * (ty - dy_drag))
+		const distBody = Math.sqrt((tx - doorX.value) * (tx - doorX.value) + (ty - doorY.value) * (ty - doorY.value))
+		const distRotate = Math.sqrt((tx - rx) * (tx - rx) + (ty - ry) * (ty - ry))
+
+		if (distRotate < 25) {
+			isRotating.value = true
+			return
+		} else if (distMove < 25 || distBody < 25) {
+			isDragging.value = true
+			return
+		}
+
+		// 2. 检测烟柜手势
+		if (isCabinetInitialized.value) {
+			const cAngle = cabinetAngle.value
+			const cDragX = cabinetX.value - 30.0 * Math.sin(cAngle)
+			const cDragY = cabinetY.value + 30.0 * Math.cos(cAngle)
+			const cRotX = cabinetX.value + 30.0 * Math.sin(cAngle)
+			const cRotY = cabinetY.value - 30.0 * Math.cos(cAngle)
+
+			const distCabinetMove = Math.sqrt((tx - cDragX) * (tx - cDragX) + (ty - cDragY) * (ty - cDragY))
+			const distCabinetRotate = Math.sqrt((tx - cRotX) * (tx - cRotX) + (ty - cRotY) * (ty - cRotY))
+
+			if (distCabinetRotate < 25) {
+				isRotatingCabinet.value = true
+			} else if (distCabinetMove < 25) {
+				isDraggingCabinet.value = true
+				dragStartOffsetX.value = tx - cabinetX.value
+				dragStartOffsetY.value = ty - cabinetY.value
+			}
+		}
+	}
+
+	const onTouchMove = (e : TouchEvent) => {
+		if (e.touches.length === 0 || !isDoorInitialized.value) return
+		const touch = e.touches[0]
+		const tx = touch.x
+		const ty = touch.y
+
+		if (isDragging.value) {
+			isDoorManuallyPlaced.value = true
+			if (props.vertices.length >= 3) {
+				const segments = generateWallSegments(props.vertices)
+				const snapRes = snapDoorToWall({ x: tx, y: ty } as Point, segments, 60.0)
+				if (snapRes['isSnapped'] as boolean) {
+					doorX.value = snapRes['x'] as number
+					doorY.value = snapRes['y'] as number
+					doorAngle.value = snapRes['angle'] as number
+				} else {
+					const forceSnapRes = snapDoorToWall({ x: tx, y: ty } as Point, segments, 999999.0)
+					doorX.value = forceSnapRes['x'] as number
+					doorY.value = forceSnapRes['y'] as number
+					doorAngle.value = forceSnapRes['angle'] as number
+				}
+			}
+			draw()
+		} else if (isRotating.value) {
+			isDoorManuallyPlaced.value = true
+			const dx = tx - doorX.value
+			const dy = ty - doorY.value
+			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
+			doorAngle.value = rawAngle
+			draw()
+		} else if (isDraggingCabinet.value) {
+			cabinetX.value = tx - dragStartOffsetX.value
+			cabinetY.value = ty - dragStartOffsetY.value
+			draw()
+		} else if (isRotatingCabinet.value) {
+			const dx = tx - cabinetX.value
+			const dy = ty - cabinetY.value
+			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
+			cabinetAngle.value = rawAngle
+			draw()
+		}
+	}
+
+	const onTouchEnd = () => {
+		isDragging.value = false
+		isRotating.value = false
+		isDraggingCabinet.value = false
+		isRotatingCabinet.value = false
 	}
 
 	// 暴露一个绘制方法给父组件

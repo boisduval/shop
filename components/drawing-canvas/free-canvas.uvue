@@ -1,5 +1,5 @@
 <template>
-	<base-shape-canvas ref="baseCanvasRef" canvas-id="freeCanvas" :active-step="activeStep" :draw-fn="drawFree"></base-shape-canvas>
+	<base-shape-canvas ref="baseCanvasRef" canvas-id="freeCanvas" :active-step="activeStep" :draw-fn="drawFree" :cabinet-style="cabinetStyle"></base-shape-canvas>
 </template>
 
 <script setup lang="uts">

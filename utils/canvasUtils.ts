@@ -112,6 +112,184 @@ export function generateWallSegments(vertices: Point[]): WallSegment[] {
 			angle: angle
 		} as WallSegment)
 	}
+	return segments
+}
+
+export function renderControlIcon(
+	ctx: CanvasRenderingContext2D,
+	left: number,
+	top: number,
+	type: string,
+	color: string
+) {
+	ctx.save()
+	ctx.translate(left, top)
+
+	// Draw circle background
+	ctx.beginPath()
+	ctx.arc(0, 0, 8, 0, Math.PI * 2)
+	ctx.fillStyle = color
+	ctx.fill()
+
+	ctx.strokeStyle = '#ffffff'
+	ctx.lineWidth = 1.2
+	ctx.lineCap = 'round'
+	ctx.lineJoin = 'round'
+
+	if (type === 'drag') {
+		// Horizontal line & arrows
+		ctx.beginPath()
+		ctx.moveTo(-5, 0)
+		ctx.lineTo(5, 0)
+		ctx.moveTo(-3, -2)
+		ctx.lineTo(-5, 0)
+		ctx.lineTo(-3, 2)
+		ctx.moveTo(3, -2)
+		ctx.lineTo(5, 0)
+		ctx.lineTo(3, 2)
+
+		// Vertical line & arrows
+		ctx.moveTo(0, -5)
+		ctx.lineTo(0, 5)
+		ctx.moveTo(-2, -3)
+		ctx.lineTo(0, -5)
+		ctx.lineTo(2, -3)
+		ctx.moveTo(-2, 3)
+		ctx.lineTo(0, 5)
+		ctx.lineTo(2, 3)
+		ctx.stroke()
+	} else if (type === 'rotate') {
+		// Draw circular arrow icon
+		ctx.beginPath()
+		ctx.arc(0, 0.5, 4, -Math.PI / 4, Math.PI * 5 / 4)
+		ctx.stroke()
+
+		// Arrow head at the end
+		ctx.beginPath()
+		ctx.moveTo(0.5, -3.5)
+		ctx.lineTo(4.5, -3.5)
+		ctx.lineTo(4.5, 0.5)
+		ctx.stroke()
+	}
+
+	ctx.restore()
+}
+
+/**
+ * 绘制烟柜及其控制按钮
+ */
+export function drawCabinet(
+	ctx: CanvasRenderingContext2D,
+	cabX: number,
+	cabY: number,
+	angle: number,
+	type: string,
+	color: string,
+	isDragging: boolean,
+	isRotating: boolean
+) {
+	ctx.save()
+	ctx.translate(cabX, cabY)
+	ctx.rotate(angle)
+
+	ctx.fillStyle = color
+	ctx.beginPath()
+
+	if (type === 'l_shape') {
+		ctx.moveTo(-22.5, -15)
+		ctx.lineTo(22.5, -15)
+		ctx.lineTo(22.5, 0)
+		ctx.lineTo(-7.5, 0)
+		ctx.lineTo(-7.5, 15)
+		ctx.lineTo(-22.5, 15)
+		ctx.closePath()
+	} else if (type === 'convex') {
+		ctx.moveTo(7.5, 15)
+		ctx.lineTo(-7.5, 15)
+		ctx.lineTo(-7.5, 0)
+		ctx.lineTo(-22.5, 0)
+		ctx.lineTo(-22.5, -15)
+		ctx.lineTo(22.5, -15)
+		ctx.lineTo(22.5, 0)
+		ctx.lineTo(7.5, 0)
+		ctx.closePath()
+	} else {
+		ctx.rect(-22.5, -15, 45, 30)
+	}
+	ctx.fill()
+
+	// 绘制文字
+	ctx.fillStyle = '#ffffff'
+	ctx.font = '10px sans-serif'
+	ctx.textAlign = 'center'
+	ctx.textBaseline = 'middle'
+	ctx.fillText('烟柜', 0, 0)
+
+	// 1. 连线到控制按钮
+	ctx.strokeStyle = '#94A3B8'
+	ctx.lineWidth = 1
+	ctx.beginPath()
+	ctx.moveTo(0, -15)
+	ctx.lineTo(0, -30)
+	ctx.stroke()
+
+	// 2. 绘制旋转和移动按钮
+	renderControlIcon(ctx, 0, 30, 'drag', color)
+	renderControlIcon(ctx, 0, -30, 'rotate', color)
+
+	ctx.restore()
+}
+
+/**
+ * 计算大门旋转手柄在画布上的物理坐标
+ */
+export function getDoorRotationHandlePos(
+	doorX: number,
+	doorY: number,
+	angle: number,
+	doorWidth: number
+): Point {
+	const rx_local = 0.0
+	const ry_local = -20.0
+	const rx = doorX + rx_local * Math.cos(angle) - ry_local * Math.sin(angle)
+	const ry = doorY + rx_local * Math.sin(angle) + ry_local * Math.cos(angle)
+	return { x: rx, y: ry } as Point
+}
+
+/**
+ * 绘制大门及其手柄
+ */
+export function drawDoor(
+	ctx: CanvasRenderingContext2D,
+	doorX: number,
+	doorY: number,
+	angle: number,
+	width: number,
+	thickness: number,
+	isDragging: boolean,
+	isRotating: boolean
+) {
+	ctx.save()
+	ctx.translate(doorX, doorY)
+	ctx.rotate(angle)
+
+	// 绘制大门矩形 (浅蓝色 #527EBF)
+	ctx.fillStyle = '#527EBF'
+	ctx.fillRect(-width / 2, -thickness / 2, width, thickness)
+
+	// 1. 连线到旋转按钮
+	ctx.strokeStyle = '#94A3B8'
+	ctx.lineWidth = 1
+	ctx.beginPath()
+	ctx.moveTo(0, -thickness / 2)
+	ctx.lineTo(0, -20)
+	ctx.stroke()
+
+	// 2. 绘制旋转和移动按钮
+	renderControlIcon(ctx, 0, 20, 'drag', '#527EBF')
+	renderControlIcon(ctx, 0, -20, 'rotate', '#527EBF')
+
+	ctx.restore()
 }
 /**
  * 4. 计算当前动态缩放比
@@ -262,14 +440,24 @@ export function drawFurniture(
 	ctx.fillStyle = '#ffffff'
 	ctx.font = '10px sans-serif'
 	ctx.fillText('烟柜', centerX - 10, centerY + 4)
-
-	// 绘制大门 (浅蓝色 #527EBF，吸附在底墙中间)
-	if (vertices.length >= 4) {
-		const bottomWallMidX = (vertices[2].x + vertices[3].x) / 2
-		const bottomWallMidY = (vertices[2].y + vertices[3].y) / 2
-		ctx.fillStyle = '#527EBF'
-		ctx.fillRect(bottomWallMidX - 20, bottomWallMidY - 5, 40, 10)
-	}
 }
+
+/**
+ * 计算大门初始基准坐标 (最左下侧)
+ */
+export function getDoorInitialPosition(vertices: Point[]): Point {
+	if (vertices.length == 0) {
+		return { x: 0.0, y: 0.0 } as Point
+	}
+	let minX = vertices[0].x
+	let maxY = vertices[0].y
+	for (let i = 1; i < vertices.length; i++) {
+		if (vertices[i].x < minX) minX = vertices[i].x
+		if (vertices[i].y > maxY) maxY = vertices[i].y
+	}
+	return { x: minX, y: maxY } as Point
+}
+
+
 
 
