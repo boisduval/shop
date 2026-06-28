@@ -220,10 +220,11 @@
 
 			const distCabinetMove = Math.sqrt((tx - cDragX) * (tx - cDragX) + (ty - cDragY) * (ty - cDragY))
 			const distCabinetRotate = Math.sqrt((tx - cRotX) * (tx - cRotX) + (ty - cRotY) * (ty - cRotY))
+			const distCabinetBody = Math.sqrt((tx - cabinetX.value) * (tx - cabinetX.value) + (ty - cabinetY.value) * (ty - cabinetY.value))
 
 			if (distCabinetRotate < 25) {
 				isRotatingCabinet.value = true
-			} else if (distCabinetMove < 25) {
+			} else if (distCabinetMove < 25 || distCabinetBody < 30) {
 				isDraggingCabinet.value = true
 				dragStartOffsetX.value = tx - cabinetX.value
 				dragStartOffsetY.value = ty - cabinetY.value
