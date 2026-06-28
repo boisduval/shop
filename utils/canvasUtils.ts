@@ -241,12 +241,14 @@ export function drawCabinet(
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 
-	// 1. 连线到控制按钮
-	ctx.strokeStyle = COLOR_HANDLE_LINE
+	// 1. 连线到控制按钮 (实线，与物体同色)
+	ctx.strokeStyle = color
 	ctx.lineWidth = 1
 	ctx.beginPath()
 	ctx.moveTo(0, -15)
 	ctx.lineTo(0, -30)
+	ctx.moveTo(0, 15)
+	ctx.lineTo(0, 30)
 	ctx.stroke()
 
 	// 2. 绘制旋转和移动按钮
@@ -293,12 +295,14 @@ export function drawDoor(
 	ctx.fillStyle = COLOR_DOOR
 	ctx.fillRect(-width / 2, -thickness / 2, width, thickness)
 
-	// 1. 连线到旋转按钮
-	ctx.strokeStyle = COLOR_HANDLE_LINE
+	// 1. 连线到旋转和移动按钮 (实线，与大门同色)
+	ctx.strokeStyle = COLOR_DOOR
 	ctx.lineWidth = 1
 	ctx.beginPath()
 	ctx.moveTo(0, -thickness / 2)
 	ctx.lineTo(0, -20)
+	ctx.moveTo(0, thickness / 2)
+	ctx.lineTo(0, 20)
 	ctx.stroke()
 
 	// 2. 绘制旋转和移动按钮
