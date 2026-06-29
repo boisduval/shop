@@ -33,21 +33,21 @@
 			</button>
 			<button 
 				v-if="!isClosed" 
-				class="btn btn-action" 
+				class="btn btn-action btn-close" 
 				:disabled="points.length < 3"
 				@tap="closeShape"
 			>
 				闭合
 			</button>
 			<button 
-				class="btn btn-action" 
+				class="btn btn-action btn-undo" 
 				:disabled="points.length === 0"
 				@tap="undo"
 			>
 				撤销
 			</button>
 			<button 
-				class="btn btn-action" 
+				class="btn btn-action btn-clear" 
 				:disabled="points.length === 0"
 				@tap="clear"
 			>
@@ -536,7 +536,7 @@
 	}
 
 	.toolbar {
-		margin-top: 12px;
+		margin-top: 16px;
 		flex-direction: row;
 		width: 100%;
 		justify-content: space-between;
@@ -546,11 +546,17 @@
 		flex: 1;
 		margin: 0 4px;
 		font-size: 12px;
-		height: 36px;
-		border-radius: 4px;
+		font-weight: bold;
+		height: 38px;
+		border-radius: 16px;
 		justify-content: center;
 		align-items: center;
-		border: 1px solid #e2e8f0;
+		border: 1px solid transparent;
+		transition: all 0.2s;
+	}
+
+	.btn:active {
+		transform: scale(0.95);
 	}
 
 	.btn-active-snap {
@@ -562,15 +568,29 @@
 	.btn-inactive-snap {
 		background-color: #F1F5F9;
 		color: #64748B;
+		border-color: #E2E8F0;
 	}
 
-	.btn-action {
-		background-color: #F8FAFC;
-		color: #334155;
+	.btn-close {
+		background-color: #E6F4EA;
+		color: #137333;
+		border-color: #CEEAD6;
+	}
+
+	.btn-undo {
+		background-color: #E8F0FE;
+		color: #1A73E8;
+		border-color: #D2E3FC;
+	}
+
+	.btn-clear {
+		background-color: #FCE8E6;
+		color: #C5221F;
+		border-color: #FAD2CF;
 	}
 
 	.btn[disabled] {
-		background-color: #F1F5F9;
+		background-color: #F8FAFC;
 		color: #CBD5E1;
 		border-color: #E2E8F0;
 	}
