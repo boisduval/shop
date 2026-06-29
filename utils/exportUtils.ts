@@ -222,13 +222,42 @@ export function generateAndSaveReport(
 								fileType: 'png',
 								success: (res2) => {
 									uni.hideLoading()
+									const customName = `${formData['applicant_name'] || '未命名'}_核查报告.png`
+
+									// #ifdef H5
+									const link = document.createElement('a')
+									link.download = customName
+									link.href = res2.tempFilePath
+									link.click()
+									uni.showModal({
+										title: '导出成功',
+										content: '报告已成功生成并下载。',
+										showCancel: false
+									})
+									// #endif
+
+									// #ifndef H5
+									let saveFilePath = res2.tempFilePath
+									
+									// #ifdef MP-WEIXIN
+									try {
+										const fs = uni.getFileSystemManager()
+										// @ts-ignore
+										const newPath = `${wx.env.USER_DATA_PATH}/${customName}`
+										fs.saveFileSync(res2.tempFilePath, newPath)
+										saveFilePath = newPath
+									} catch (fsErr : any) {
+										console.error('微信文件管理器保存失败:', fsErr)
+									}
+									// #endif
+
 									// 保存到系统相册
 									uni.saveImageToPhotosAlbum({
-										filePath: res2.tempFilePath,
+										filePath: saveFilePath,
 										success: () => {
 											uni.showModal({
 												title: '导出成功',
-												content: '报告已成功生成并保存到相册。',
+												content: `报告【${customName}】已成功保存到相册。`,
 												showCancel: false
 											})
 										},
@@ -236,11 +265,12 @@ export function generateAndSaveReport(
 											console.error('保存相册失败:', saveErr)
 											uni.showModal({
 												title: '导出成功',
-												content: '报告已成功生成临时文件，但保存至相册失败，请检查相册权限。',
+												content: '报告已生成临时文件，但保存至相册失败，请检查相册权限。',
 												showCancel: false
 											})
 										}
 									})
+									// #endif
 								},
 								fail: (err) => {
 									uni.hideLoading()
