@@ -7,11 +7,13 @@
 		<app-header :active-step="activeStep" :selected-template="selectedTemplateName" :steps="steps"></app-header>
 
 		<!-- 步骤 1 的非滚动 Canvas 画布区域 (参考官方示例，放在滚动区域外) -->
-		<view v-show="activeStep === 1" class="preview-container preview-container-edit grid-bg">
+		<view v-show="activeStep === 1 && selectedShape !== 'free'" class="preview-container preview-container-edit grid-bg">
 			<rect-canvas ref="rectCanvasRef" v-if="selectedShape === 'rect'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></rect-canvas>
 			<trap-canvas ref="trapCanvasRef" v-if="selectedShape === 'trap'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></trap-canvas>
+		</view>
+		<view v-show="activeStep === 1 && selectedShape === 'free'" class="preview-container preview-container-free-wrapper">
 			<free-canvas ref="freeCanvasRef" v-if="selectedShape === 'free'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></free-canvas>
 		</view>
@@ -255,5 +257,10 @@
 	.selector-wrapper {
 		margin-bottom: 12px;
 		width: 100%;
+	}
+
+	.preview-container-free-wrapper {
+		margin: 16px 16px 0;
+		width: calc(100% - 32px);
 	}
 </style>
