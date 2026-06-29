@@ -1,11 +1,29 @@
 <template>
-	<base-shape-canvas ref="baseCanvasRef" canvas-id="freeCanvas" :active-step="activeStep" :draw-fn="drawFree" :cabinet-style="cabinetStyle"></base-shape-canvas>
+	<view class="free-canvas-wrapper">
+		<base-shape-canvas
+			ref="baseCanvasRef"
+			canvas-id="freeCanvas"
+			:active-step="activeStep"
+			:draw-fn="drawFree"
+			:vertices="points"
+			:is-closed="isClosed"
+			:cabinet-style="cabinetStyle"
+			@canvas-touchstart="onTouchStart"
+			@canvas-touchmove="onTouchMove"
+			@canvas-touchend="onTouchEnd"
+		></base-shape-canvas>
+		<view class="btn-row">
+			<button class="btn" @tap="undo">撤销</button>
+			<button class="btn" @tap="clear">清空</button>
+		</view>
+	</view>
 </template>
 
 <script setup lang="uts">
 	import { ref, computed, watch, PropType } from 'vue'
 	import { Record } from '../../utils/types'
-	import { Point } from '../../utils/canvasUtils'
+	import { Point, calculatePolygonArea } from '../../utils/canvasUtils'
+	import { Viewport, SnappedGuide, getFreeViewport, snapFreePoint, drawSegmentLabel } from '../../utils/freeCanvasUtils'
 	import BaseShapeCanvas from './base-shape-canvas.uvue'
 
 	const props = defineProps({
@@ -27,38 +45,315 @@
 
 	const baseCanvasRef = ref<ComponentPublicInstance | null>(null)
 
+	// 状态管理：自由顶点列表、闭合状态、拉线标记、临时拉线终点及热区判定半径
+	const points = ref<Point[]>([])
+	const isClosed = ref(false)
+	const isDrawingNew = ref(false)
+	const tempEndPoint = ref<Point | null>(null)
+	const hitRadius = ref(20.0)
+
+	// 画布尺寸状态（由绘制函数渲染时动态写入）
+	const canvasWidth = ref(300.0)
+	const canvasHeight = ref(300.0)
+
+	// 当前吸附提示线数据
+	const snappedGuide = ref<SnappedGuide | null>(null)
+
+	// 现实比例尺常量 (40像素 = 1米)
+	const SCALE = 40.0
+
+	// 视口计算辅助方法
+	const getViewport = () : Viewport => {
+		return getFreeViewport(points.value, isDrawingNew.value, tempEndPoint.value, canvasWidth.value, canvasHeight.value)
+	}
+
+	// 面积计算
+	const calculateArea = () : number => {
+		if (points.value.length < 3) return 0.0
+		return calculatePolygonArea(points.value, SCALE)
+	}
+
+	// 坐标吸附与对齐换算方法
+	const snapScreenPoint = (tx : number, ty : number, excludeIndex : number) : Point => {
+		const vp = getViewport()
+		const res = snapFreePoint(tx, ty, points.value, excludeIndex, vp)
+		snappedGuide.value = res.guide
+		return res.snappedPt
+	}
+
+	// 手势事件监听处理
+	const onTouchStart = (e : TouchEvent) => {
+		if (isClosed.value) return // 图形闭合后拦截，将拖拽权释放给底层的 baseCanvas
+
+		if (e.touches.length === 0) return
+		const touch = e.touches[0]
+		const tx = touch.x
+		const ty = touch.y
+
+		const vp = getViewport()
+
+		if (points.value.length === 0) {
+			// 落子第一个点
+			points.value.push({ x: tx, y: ty } as Point)
+			redraw()
+		} else {
+			// 校验触碰位置是否靠近当前最后一个端点，若靠近则开始拉线
+			const lastPtVirtual = points.value[points.value.length - 1]
+			const lastPtScreenX = lastPtVirtual.x * vp.zoom + vp.panX
+			const lastPtScreenY = lastPtVirtual.y * vp.zoom + vp.panY
+			const dist = Math.sqrt((tx - lastPtScreenX) * (tx - lastPtScreenX) + (ty - lastPtScreenY) * (ty - lastPtScreenY))
+			
+			if (dist < hitRadius.value) {
+				isDrawingNew.value = true
+				tempEndPoint.value = { x: lastPtVirtual.x, y: lastPtVirtual.y } as Point
+				redraw()
+			}
+		}
+	}
+
+	const onTouchMove = (e : TouchEvent) => {
+		if (isClosed.value) return
+		if (e.touches.length === 0) return
+		const touch = e.touches[0]
+		const tx = touch.x
+		const ty = touch.y
+
+		// 处于新点拉伸中时，更新终点坐标并施加吸附判定
+		if (isDrawingNew.value) {
+			const snappedVirtualPt = snapScreenPoint(tx, ty, -1)
+			tempEndPoint.value = snappedVirtualPt
+			redraw()
+		}
+	}
+
+	const onTouchEnd = (e : TouchEvent) => {
+		if (isClosed.value) return
+
+		const vp = getViewport()
+
+		if (isDrawingNew.value && tempEndPoint.value != null) {
+			const endPtVirtual = tempEndPoint.value!
+			const endPtScreenX = endPtVirtual.x * vp.zoom + vp.panX
+			const endPtScreenY = endPtVirtual.y * vp.zoom + vp.panY
+
+			// 闭合检测：拉线末端是否足够靠近首个顶点且当前多边形边数 >= 3
+			const startPtVirtual = points.value[0]
+			const startPtScreenX = startPtVirtual.x * vp.zoom + vp.panX
+			const startPtScreenY = startPtVirtual.y * vp.zoom + vp.panY
+			const dist = Math.sqrt((endPtScreenX - startPtScreenX) * (endPtScreenX - startPtScreenX) + (endPtScreenY - startPtScreenY) * (endPtScreenY - startPtScreenY))
+
+			if (dist < hitRadius.value && points.value.length >= 3) {
+				isClosed.value = true
+				tempEndPoint.value = null
+				emit('update:area', Math.round(calculateArea() * 100) / 100)
+			} else {
+				points.value.push(endPtVirtual)
+			}
+		}
+
+		isDrawingNew.value = false
+		tempEndPoint.value = null
+		snappedGuide.value = null
+		redraw()
+	}
+
+	// 撤销上一步
+	const undo = () => {
+		snappedGuide.value = null
+		if (isClosed.value) {
+			isClosed.value = false
+			redraw()
+			return
+		}
+
+		if (points.value.length > 0) {
+			points.value.pop()
+			redraw()
+		}
+	}
+
+	// 清空画布
+	const clear = () => {
+		points.value = []
+		isClosed.value = false
+		isDrawingNew.value = false
+		tempEndPoint.value = null
+		snappedGuide.value = null
+		redraw()
+	}
+
+	// 通知底层画布重绘
+	const redraw = () => {
+		if (baseCanvasRef.value != null) {
+			baseCanvasRef.value!.$callMethod('redraw')
+		}
+	}
+
+	// 2D 画布实际渲染过程
 	const drawFree = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+		// 写入画布最新宽高
+		canvasWidth.value = width
+		canvasHeight.value = height
+
 		ctx.clearRect(0, 0, width, height)
 
-		// 模拟绘制多边形
-		ctx.fillStyle = '#EAEAEA'
-		ctx.beginPath()
-		ctx.moveTo(width * 0.2, height * 0.2)
-		ctx.lineTo(width * 0.8, height * 0.2)
-		ctx.lineTo(width * 0.9, height * 0.7)
-		ctx.lineTo(width * 0.5, height * 0.9)
-		ctx.lineTo(width * 0.1, height * 0.6)
-		ctx.closePath()
-		ctx.fill()
+		const vp = getViewport()
 
-		ctx.strokeStyle = '#8A8A8A'
-		ctx.lineWidth = 6
-		ctx.stroke()
+		if (points.value.length === 0) return
 
-		// 只画一条红色对角线
-		ctx.strokeStyle = '#FF0000'
-		ctx.lineWidth = 6
-		ctx.beginPath()
-		ctx.moveTo(20, 20)
-		ctx.lineTo(150, 150)
-		ctx.stroke()
+		// 1. 绘制房间墙体填充与线条
+		ctx.save()
+		if (isClosed.value) {
+			// 图形闭合：绘制填充背景
+			ctx.fillStyle = '#EAEAEA'
+			ctx.beginPath()
+			ctx.moveTo(points.value[0].x * vp.zoom + vp.panX, points.value[0].y * vp.zoom + vp.panY)
+			for (let i = 1; i < points.value.length; i++) {
+				ctx.lineTo(points.value[i].x * vp.zoom + vp.panX, points.value[i].y * vp.zoom + vp.panY)
+			}
+			ctx.closePath()
+			ctx.fill()
+
+			// 绘制闭合墙体轮廓（粗实线，拐角和端点为圆角连接）
+			ctx.strokeStyle = '#8A8A8A'
+			ctx.lineWidth = 6.0
+			ctx.lineJoin = 'round'
+			ctx.lineCap = 'round'
+			ctx.beginPath()
+			ctx.moveTo(points.value[0].x * vp.zoom + vp.panX, points.value[0].y * vp.zoom + vp.panY)
+			for (let i = 1; i < points.value.length; i++) {
+				ctx.lineTo(points.value[i].x * vp.zoom + vp.panX, points.value[i].y * vp.zoom + vp.panY)
+			}
+			ctx.closePath()
+			ctx.stroke()
+		} else {
+			// 图形未闭合：绘制普通折线段连接已存在顶点
+			ctx.strokeStyle = '#3B66F5'
+			ctx.lineWidth = 2.0
+			ctx.beginPath()
+			ctx.moveTo(points.value[0].x * vp.zoom + vp.panX, points.value[0].y * vp.zoom + vp.panY)
+			for (let i = 1; i < points.value.length; i++) {
+				ctx.lineTo(points.value[i].x * vp.zoom + vp.panX, points.value[i].y * vp.zoom + vp.panY)
+			}
+			ctx.stroke()
+		}
+		ctx.restore()
+
+		// 2. 绘制拉伸绘制中的临时引导线（虚线）
+		if (isDrawingNew.value && tempEndPoint.value != null) {
+			ctx.save()
+			ctx.strokeStyle = '#3B66F5'
+			ctx.lineWidth = 2.0
+			ctx.setLineDash([6, 4])
+			ctx.beginPath()
+			const lastPt = points.value[points.value.length - 1]
+			ctx.moveTo(lastPt.x * vp.zoom + vp.panX, lastPt.y * vp.zoom + vp.panY)
+			ctx.lineTo(tempEndPoint.value!.x * vp.zoom + vp.panX, tempEndPoint.value!.y * vp.zoom + vp.panY)
+			ctx.stroke()
+			ctx.setLineDash([])
+			ctx.restore()
+		}
+
+		// 3. 智能吸附与对准辅助线渲染
+		if (snappedGuide.value != null) {
+			const guide = snappedGuide.value!
+			ctx.save()
+			ctx.strokeStyle = '#f59e0b'
+			ctx.lineWidth = 1.0
+			ctx.setLineDash([5, 5])
+
+			// 渲染全屏横向或纵向吸附线
+			if (guide.hasX) {
+				ctx.beginPath()
+				ctx.moveTo(guide.refPtX, 0)
+				ctx.lineTo(guide.refPtX, height)
+				ctx.stroke()
+			}
+			if (guide.hasY) {
+				ctx.beginPath()
+				ctx.moveTo(0, guide.refPtY)
+				ctx.lineTo(width, guide.refPtY)
+				ctx.stroke()
+			}
+
+			// 对齐的参考源头顶点周围绘制一圈黄色虚线小圆环
+			ctx.beginPath()
+			ctx.arc(guide.refPtX, guide.refPtY, 12, 0, Math.PI * 2)
+			ctx.strokeStyle = '#f59e0b'
+			ctx.lineWidth = 1.5
+			ctx.setLineDash([])
+			ctx.stroke()
+			ctx.restore()
+		}
+
+		// 4. 计算与渲染每段墙面的长度标注 (物理中点)
+		const n = points.value.length
+		if (n > 0) {
+			const limit = isClosed.value ? n : n - 1
+			for (let i = 0; i < limit; i++) {
+				const p1 = points.value[i]
+				const p2 = points.value[(i + 1) % n]
+				const p1ScreenX = p1.x * vp.zoom + vp.panX
+				const p1ScreenY = p1.y * vp.zoom + vp.panY
+				const p2ScreenX = p2.x * vp.zoom + vp.panX
+				const p2ScreenY = p2.y * vp.zoom + vp.panY
+				
+				const midX = (p1ScreenX + p2ScreenX) / 2
+				const midY = (p1ScreenY + p2ScreenY) / 2
+				
+				const distVirtual = Math.sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y))
+				const lengthMeters = distVirtual / SCALE
+				drawSegmentLabel(ctx, `${lengthMeters.toFixed(1)}m`, midX, midY)
+			}
+
+			// 绘制拉伸线段的长度标注
+			if (isDrawingNew.value && tempEndPoint.value != null) {
+				const lastPt = points.value[n - 1]
+				const cur = tempEndPoint.value!
+				
+				const lastScreenX = lastPt.x * vp.zoom + vp.panX
+				const lastScreenY = lastPt.y * vp.zoom + vp.panY
+				const curScreenX = cur.x * vp.zoom + vp.panX
+				const curScreenY = cur.y * vp.zoom + vp.panY
+				
+				const midX = (lastScreenX + curScreenX) / 2
+				const midY = (lastScreenY + curScreenY) / 2
+				
+				const distVirtual = Math.sqrt((cur.x - lastPt.x) * (cur.x - lastPt.x) + (cur.y - lastPt.y) * (cur.y - lastPt.y))
+				const lengthMeters = distVirtual / SCALE
+				drawSegmentLabel(ctx, `${lengthMeters.toFixed(1)}m`, midX, midY)
+			}
+		}
+
+		// 5. 绘制普通控制点小圆圈
+		for (let i = 0; i < points.value.length; i++) {
+			const pt = points.value[i]
+			const px = pt.x * vp.zoom + vp.panX
+			const py = pt.y * vp.zoom + vp.panY
+
+			ctx.save()
+			ctx.beginPath()
+			if (!isClosed.value && i === 0 && points.value.length >= 3) {
+				// 未闭合状态下，第 1 个点高亮显示为实心红色，半径为 8px
+				ctx.arc(px, py, 8, 0, Math.PI * 2)
+				ctx.fillStyle = '#ef4444'
+			} else {
+				// 普通顶点渲染为蓝色，半径为 4px
+				ctx.arc(px, py, 4, 0, Math.PI * 2)
+				ctx.fillStyle = '#3B66F5'
+			}
+			ctx.fill()
+
+			ctx.strokeStyle = '#ffffff'
+			ctx.lineWidth = 1.5
+			ctx.stroke()
+			ctx.restore()
+		}
 	}
 
 	watch([() => props.params, () => props.cabinetStyle], () => {
-		if (baseCanvasRef.value != null) {
-			baseCanvasRef.value!.$callMethod('redraw')
- 		}
- 	}, { deep: true })
+		redraw()
+	})
 
 	defineExpose({
 		exportImage: (callback: (path: string) => void) => {
@@ -70,3 +365,28 @@
 		}
 	})
 </script>
+
+<style scoped>
+	.free-canvas-wrapper {
+		position: relative;
+		width: 100%;
+		height: 300px;
+	}
+
+	.btn-row {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		flex-direction: row;
+		z-index: 10;
+	}
+
+	.btn {
+		margin-left: 8px;
+		font-size: 12px;
+		padding: 4px 8px;
+		background-color: rgba(255, 255, 255, 0.9);
+		border: 1px solid #cccccc;
+		border-radius: 4px;
+	}
+</style>

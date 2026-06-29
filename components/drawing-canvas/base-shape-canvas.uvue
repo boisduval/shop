@@ -32,8 +32,15 @@
 			type: Array as PropType<Point[]>,
 			required: false,
 			default: () => [] as Point[]
+		},
+		isClosed: {
+			type: Boolean,
+			required: false,
+			default: true
 		}
 	})
+
+	const emit = defineEmits(['canvas-touchstart', 'canvas-touchmove', 'canvas-touchend'])
 
 	const dpr = uni.getWindowInfo().pixelRatio
 
@@ -169,39 +176,43 @@
 		// 传递 css 逻辑宽高，而不是乘以 dpr 后的物理像素宽高
 		props.drawFn(ctx, canvas.offsetWidth, canvas.offsetHeight)
 
-		if (isCabinetInitialized.value) {
-			drawCabinet(
-				ctx,
-				cabinetX.value,
-				cabinetY.value,
-				cabinetAngle.value,
-				props.cabinetStyle,
-				COLOR_CABINET,
-				isDraggingCabinet.value,
-				isRotatingCabinet.value,
-				cabinetScale.value,
-				activeObjectType.value === 'cabinet'
-			)
-		}
+		if (props.isClosed) {
+			if (isCabinetInitialized.value) {
+				drawCabinet(
+					ctx,
+					cabinetX.value,
+					cabinetY.value,
+					cabinetAngle.value,
+					props.cabinetStyle,
+					COLOR_CABINET,
+					isDraggingCabinet.value,
+					isRotatingCabinet.value,
+					cabinetScale.value,
+					activeObjectType.value === 'cabinet'
+				)
+			}
 
-		if (isDoorInitialized.value) {
-			drawDoor(
-				ctx,
-				doorX.value,
-				doorY.value,
-				doorAngle.value,
-				doorWidth.value,
-				doorThickness.value,
-				isDragging.value,
-				isRotating.value,
-				activeObjectType.value === 'door'
-			)
-		}
+			if (isDoorInitialized.value) {
+				drawDoor(
+					ctx,
+					doorX.value,
+					doorY.value,
+					doorAngle.value,
+					doorWidth.value,
+					doorThickness.value,
+					isDragging.value,
+					isRotating.value,
+					activeObjectType.value === 'door'
+				)
+			}
 
-		drawLegends(ctx, canvas.offsetWidth, canvas.offsetHeight)
+			drawLegends(ctx, canvas.offsetWidth, canvas.offsetHeight)
+		}
 	}
 
 	const onTouchStart = (e : TouchEvent) => {
+		emit('canvas-touchstart', e)
+		if (!props.isClosed) return
 		if (e.touches.length === 0 || !isDoorInitialized.value) return
 		const touch = e.touches[0]
 		const tx = touch.x
@@ -316,6 +327,8 @@
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
+		emit('canvas-touchmove', e)
+		if (!props.isClosed) return
 		if (e.touches.length === 0 || !isDoorInitialized.value) return
 		const touch = e.touches[0]
 		const tx = touch.x
@@ -389,7 +402,9 @@
 		}
 	}
 
-	const onTouchEnd = () => {
+	const onTouchEnd = (e : TouchEvent) => {
+		emit('canvas-touchend', e)
+		if (!props.isClosed) return
 		if (isRotating.value && props.vertices.length >= 3) {
 			const segments = generateWallSegments(props.vertices)
 			const snapRes = snapDoorToWall({ x: doorX.value, y: doorY.value } as Point, segments, 999999.0)
