@@ -90,6 +90,7 @@
 	const tempEndPoint = ref<Point | null>(null)
 	const hitRadius = ref(20.0)
 	const isSnapEnabled = ref(true)
+	const isExporting = ref(false)
 
 	// Step 2: Vertex Dragging after Closure States
 	const isDraggingVertex = ref(false)
@@ -454,37 +455,39 @@
 		}
 
 		// 2. Draw vertices circles
-		for (let i = 0; i < points.value.length; i++) {
-			const pt = points.value[i]
-			const px = pt.x * vp.zoom + vp.panX
-			const py = pt.y * vp.zoom + vp.panY
+		if (!isExporting.value) {
+			for (let i = 0; i < points.value.length; i++) {
+				const pt = points.value[i]
+				const px = pt.x * vp.zoom + vp.panX
+				const py = pt.y * vp.zoom + vp.panY
 
-			ctx.save()
-			
-			// Highlight / blue halo when dragging vertex
-			if (isClosed.value && i === draggedVertexIndex.value) {
+				ctx.save()
+				
+				// Highlight / blue halo when dragging vertex
+				if (isClosed.value && i === draggedVertexIndex.value) {
+					ctx.beginPath()
+					ctx.arc(px, py, 10, 0, Math.PI * 2)
+					ctx.fillStyle = 'rgba(59, 102, 245, 0.3)'
+					ctx.fill()
+				}
+
 				ctx.beginPath()
-				ctx.arc(px, py, 10, 0, Math.PI * 2)
-				ctx.fillStyle = 'rgba(59, 102, 245, 0.3)'
+				if (!isClosed.value && i === 0 && points.value.length >= 3) {
+					// Start vertex highlighted red, radius 8px
+					ctx.arc(px, py, 8, 0, Math.PI * 2)
+					ctx.fillStyle = '#ef4444'
+				} else {
+					// Normal blue vertex, radius 4px
+					ctx.arc(px, py, 4, 0, Math.PI * 2)
+					ctx.fillStyle = '#3B66F5'
+				}
 				ctx.fill()
-			}
 
-			ctx.beginPath()
-			if (!isClosed.value && i === 0 && points.value.length >= 3) {
-				// Start vertex highlighted red, radius 8px
-				ctx.arc(px, py, 8, 0, Math.PI * 2)
-				ctx.fillStyle = '#ef4444'
-			} else {
-				// Normal blue vertex, radius 4px
-				ctx.arc(px, py, 4, 0, Math.PI * 2)
-				ctx.fillStyle = '#3B66F5'
+				ctx.strokeStyle = '#ffffff'
+				ctx.lineWidth = 1.5
+				ctx.stroke()
+				ctx.restore()
 			}
-			ctx.fill()
-
-			ctx.strokeStyle = '#ffffff'
-			ctx.lineWidth = 1.5
-			ctx.stroke()
-			ctx.restore()
 		}
 	}
 
@@ -495,7 +498,15 @@
 	defineExpose({
 		exportImage: (callback: (path: string) => void) => {
 			if (baseCanvasRef.value != null) {
-				baseCanvasRef.value!.$callMethod('exportImage', callback)
+				isExporting.value = true
+				redraw()
+				setTimeout(() => {
+					baseCanvasRef.value!.$callMethod('exportImage', (path: string) => {
+						isExporting.value = false
+						redraw()
+						callback(path)
+					})
+				}, 50)
 			} else {
 				callback('')
 			}
