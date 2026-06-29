@@ -45,35 +45,38 @@
 
 	const baseCanvasRef = ref<ComponentPublicInstance | null>(null)
 
-	// 状态管理：自由顶点列表、闭合状态、拉线标记、临时拉线终点及热区判定半径
+	// State Management
 	const points = ref<Point[]>([])
 	const isClosed = ref(false)
 	const isDrawingNew = ref(false)
 	const tempEndPoint = ref<Point | null>(null)
 	const hitRadius = ref(20.0)
 
-	// 画布尺寸状态（由绘制函数渲染时动态写入）
+	// Step 2: Vertex Dragging after Closure States
+	const isDraggingVertex = ref(false)
+	const draggedVertexIndex = ref(-1)
+
+	// Canvas dimensions (updated reactively in drawFree)
 	const canvasWidth = ref(300.0)
 	const canvasHeight = ref(300.0)
 
-	// 当前吸附提示线数据
+	// Snapping guideline information
 	const snappedGuide = ref<SnappedGuide | null>(null)
 
-	// 现实比例尺常量 (40像素 = 1米)
-	const SCALE = 40.0
+	const SCALE = 40.0 // 40px = 1m
 
-	// 视口计算辅助方法
+	// Bounding Box, Zoom & Pan calculations
 	const getViewport = () : Viewport => {
 		return getFreeViewport(points.value, isDrawingNew.value, tempEndPoint.value, canvasWidth.value, canvasHeight.value)
 	}
 
-	// 面积计算
+	// Calculate area using the Shoelace formula
 	const calculateArea = () : number => {
 		if (points.value.length < 3) return 0.0
 		return calculatePolygonArea(points.value, SCALE)
 	}
 
-	// 坐标吸附与对齐换算方法
+	// Snapping function in screen coordinates
 	const snapScreenPoint = (tx : number, ty : number, excludeIndex : number) : Point => {
 		const vp = getViewport()
 		const res = snapFreePoint(tx, ty, points.value, excludeIndex, vp)
@@ -81,10 +84,8 @@
 		return res.snappedPt
 	}
 
-	// 手势事件监听处理
+	// Handlers
 	const onTouchStart = (e : TouchEvent) => {
-		if (isClosed.value) return // 图形闭合后拦截，将拖拽权释放给底层的 baseCanvas
-
 		if (e.touches.length === 0) return
 		const touch = e.touches[0]
 		const tx = touch.x
@@ -92,17 +93,36 @@
 
 		const vp = getViewport()
 
+		if (isClosed.value) {
+			// Closed Shape: Vertex Dragging detection
+			for (let i = 0; i < points.value.length; i++) {
+				const ptVirtual = points.value[i]
+				const px = ptVirtual.x * vp.zoom + vp.panX
+				const py = ptVirtual.y * vp.zoom + vp.panY
+				const dist = Math.sqrt((tx - px) * (tx - px) + (ty - py) * (ty - py))
+				
+				if (dist < hitRadius.value) {
+					isDraggingVertex.value = true
+					draggedVertexIndex.value = i
+					redraw()
+					return // Hit vertex: intercept event
+				}
+			}
+			return // Did not hit vertex: return early to delegate to base-shape-canvas
+		}
+
 		if (points.value.length === 0) {
-			// 落子第一个点
+			// First point
 			points.value.push({ x: tx, y: ty } as Point)
 			redraw()
 		} else {
-			// 校验触碰位置是否靠近当前最后一个端点，若靠近则开始拉线
+			// Check if touch is near the last vertex to start drawing a new line
 			const lastPtVirtual = points.value[points.value.length - 1]
 			const lastPtScreenX = lastPtVirtual.x * vp.zoom + vp.panX
 			const lastPtScreenY = lastPtVirtual.y * vp.zoom + vp.panY
 			const dist = Math.sqrt((tx - lastPtScreenX) * (tx - lastPtScreenX) + (ty - lastPtScreenY) * (ty - lastPtScreenY))
 			
+			// Double touch protection: only allow drawing start from the last vertex
 			if (dist < hitRadius.value) {
 				isDrawingNew.value = true
 				tempEndPoint.value = { x: lastPtVirtual.x, y: lastPtVirtual.y } as Point
@@ -112,13 +132,20 @@
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
-		if (isClosed.value) return
 		if (e.touches.length === 0) return
 		const touch = e.touches[0]
 		const tx = touch.x
 		const ty = touch.y
 
-		// 处于新点拉伸中时，更新终点坐标并施加吸附判定
+		if (isClosed.value) {
+			if (isDraggingVertex.value && draggedVertexIndex.value !== -1) {
+				const snappedVirtualPt = snapScreenPoint(tx, ty, draggedVertexIndex.value)
+				points.value[draggedVertexIndex.value] = snappedVirtualPt
+				redraw()
+			}
+			return
+		}
+
 		if (isDrawingNew.value) {
 			const snappedVirtualPt = snapScreenPoint(tx, ty, -1)
 			tempEndPoint.value = snappedVirtualPt
@@ -127,7 +154,16 @@
 	}
 
 	const onTouchEnd = (e : TouchEvent) => {
-		if (isClosed.value) return
+		if (isClosed.value) {
+			if (isDraggingVertex.value) {
+				isDraggingVertex.value = false
+				draggedVertexIndex.value = -1
+				snappedGuide.value = null
+				emit('update:area', Math.round(calculateArea() * 100) / 100)
+				redraw()
+			}
+			return
+		}
 
 		const vp = getViewport()
 
@@ -136,13 +172,21 @@
 			const endPtScreenX = endPtVirtual.x * vp.zoom + vp.panX
 			const endPtScreenY = endPtVirtual.y * vp.zoom + vp.panY
 
-			// 闭合检测：拉线末端是否足够靠近首个顶点且当前多边形边数 >= 3
+			// Closure check: either distance is close OR snapped directly to the start point points[0]
 			const startPtVirtual = points.value[0]
 			const startPtScreenX = startPtVirtual.x * vp.zoom + vp.panX
 			const startPtScreenY = startPtVirtual.y * vp.zoom + vp.panY
 			const dist = Math.sqrt((endPtScreenX - startPtScreenX) * (endPtScreenX - startPtScreenX) + (endPtScreenY - startPtScreenY) * (endPtScreenY - startPtScreenY))
 
-			if (dist < hitRadius.value && points.value.length >= 3) {
+			let shouldClose = dist < hitRadius.value
+			if (!shouldClose && snappedGuide.value != null) {
+				const guide = snappedGuide.value!
+				if (Math.abs(guide.refPtX - startPtScreenX) < 1.0 && Math.abs(guide.refPtY - startPtScreenY) < 1.0) {
+					shouldClose = true
+				}
+			}
+
+			if (shouldClose && points.value.length >= 3) {
 				isClosed.value = true
 				tempEndPoint.value = null
 				emit('update:area', Math.round(calculateArea() * 100) / 100)
@@ -157,9 +201,11 @@
 		redraw()
 	}
 
-	// 撤销上一步
 	const undo = () => {
 		snappedGuide.value = null
+		isDrawingNew.value = false
+		tempEndPoint.value = null
+		
 		if (isClosed.value) {
 			isClosed.value = false
 			redraw()
@@ -172,26 +218,27 @@
 		}
 	}
 
-	// 清空画布
 	const clear = () => {
 		points.value = []
 		isClosed.value = false
 		isDrawingNew.value = false
+		isDraggingVertex.value = false
+		draggedVertexIndex.value = -1
 		tempEndPoint.value = null
 		snappedGuide.value = null
 		redraw()
 	}
 
-	// 通知底层画布重绘
+	// Redraw trigger
 	const redraw = () => {
 		if (baseCanvasRef.value != null) {
 			baseCanvasRef.value!.$callMethod('redraw')
 		}
 	}
 
-	// 2D 画布实际渲染过程
+	// Main free canvas drawing function
 	const drawFree = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-		// 写入画布最新宽高
+		// Update canvas dimensions
 		canvasWidth.value = width
 		canvasHeight.value = height
 
@@ -201,10 +248,10 @@
 
 		if (points.value.length === 0) return
 
-		// 1. 绘制房间墙体填充与线条
+		// 1. Draw polygon (Fill and walls)
 		ctx.save()
 		if (isClosed.value) {
-			// 图形闭合：绘制填充背景
+			// Closed room fill
 			ctx.fillStyle = '#EAEAEA'
 			ctx.beginPath()
 			ctx.moveTo(points.value[0].x * vp.zoom + vp.panX, points.value[0].y * vp.zoom + vp.panY)
@@ -214,7 +261,7 @@
 			ctx.closePath()
 			ctx.fill()
 
-			// 绘制闭合墙体轮廓（粗实线，拐角和端点为圆角连接）
+			// Closed room walls
 			ctx.strokeStyle = '#8A8A8A'
 			ctx.lineWidth = 6.0
 			ctx.lineJoin = 'round'
@@ -227,7 +274,7 @@
 			ctx.closePath()
 			ctx.stroke()
 		} else {
-			// 图形未闭合：绘制普通折线段连接已存在顶点
+			// Ordinary blue line path
 			ctx.strokeStyle = '#3B66F5'
 			ctx.lineWidth = 2.0
 			ctx.beginPath()
@@ -239,7 +286,7 @@
 		}
 		ctx.restore()
 
-		// 2. 绘制拉伸绘制中的临时引导线（虚线）
+		// 2. Draw active rubber-band guide line if dragging
 		if (isDrawingNew.value && tempEndPoint.value != null) {
 			ctx.save()
 			ctx.strokeStyle = '#3B66F5'
@@ -254,7 +301,7 @@
 			ctx.restore()
 		}
 
-		// 3. 智能吸附与对准辅助线渲染
+		// 3. Draw alignment guidelines
 		if (snappedGuide.value != null) {
 			const guide = snappedGuide.value!
 			ctx.save()
@@ -262,7 +309,7 @@
 			ctx.lineWidth = 1.0
 			ctx.setLineDash([5, 5])
 
-			// 渲染全屏横向或纵向吸附线
+			// Draw horizontal / vertical snap lines in screen space
 			if (guide.hasX) {
 				ctx.beginPath()
 				ctx.moveTo(guide.refPtX, 0)
@@ -276,7 +323,7 @@
 				ctx.stroke()
 			}
 
-			// 对齐的参考源头顶点周围绘制一圈黄色虚线小圆环
+			// Draw reference vertex indicator circle
 			ctx.beginPath()
 			ctx.arc(guide.refPtX, guide.refPtY, 12, 0, Math.PI * 2)
 			ctx.strokeStyle = '#f59e0b'
@@ -286,7 +333,7 @@
 			ctx.restore()
 		}
 
-		// 4. 计算与渲染每段墙面的长度标注 (物理中点)
+		// 4. Draw segment length labels
 		const n = points.value.length
 		if (n > 0) {
 			const limit = isClosed.value ? n : n - 1
@@ -306,7 +353,7 @@
 				drawSegmentLabel(ctx, `${lengthMeters.toFixed(1)}m`, midX, midY)
 			}
 
-			// 绘制拉伸线段的长度标注
+			// Length of the active guide line
 			if (isDrawingNew.value && tempEndPoint.value != null) {
 				const lastPt = points.value[n - 1]
 				const cur = tempEndPoint.value!
@@ -325,20 +372,29 @@
 			}
 		}
 
-		// 5. 绘制普通控制点小圆圈
+		// 5. Draw vertices circles
 		for (let i = 0; i < points.value.length; i++) {
 			const pt = points.value[i]
 			const px = pt.x * vp.zoom + vp.panX
 			const py = pt.y * vp.zoom + vp.panY
 
 			ctx.save()
+			
+			// Highlight / blue halo when dragging vertex
+			if (isClosed.value && i === draggedVertexIndex.value) {
+				ctx.beginPath()
+				ctx.arc(px, py, 10, 0, Math.PI * 2)
+				ctx.fillStyle = 'rgba(59, 102, 245, 0.3)'
+				ctx.fill()
+			}
+
 			ctx.beginPath()
 			if (!isClosed.value && i === 0 && points.value.length >= 3) {
-				// 未闭合状态下，第 1 个点高亮显示为实心红色，半径为 8px
+				// Start vertex highlighted red, radius 8px
 				ctx.arc(px, py, 8, 0, Math.PI * 2)
 				ctx.fillStyle = '#ef4444'
 			} else {
-				// 普通顶点渲染为蓝色，半径为 4px
+				// Normal blue vertex, radius 4px
 				ctx.arc(px, py, 4, 0, Math.PI * 2)
 				ctx.fillStyle = '#3B66F5'
 			}
