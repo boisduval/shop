@@ -37,6 +37,25 @@
 			type: Boolean,
 			required: false,
 			default: true
+		},
+		zoom: {
+			type: Number,
+			required: false,
+			default: 1.0
+		},
+		panX: {
+			type: Number,
+			required: false,
+			default: 0.0
+		},
+		panY: {
+			type: Number,
+			required: false,
+			default: 0.0
+		},
+		drawLabelsFn: {
+			type: Function as PropType<(ctx : CanvasRenderingContext2D, width : number, height : number) => void>,
+			required: false
 		}
 	})
 
@@ -109,32 +128,49 @@
 	}
 
 	const initCabinet = () => {
-		cabinetX.value = 150.0
-		cabinetY.value = 150.0
+		if (props.vertices.length > 0) {
+			let minX = props.vertices[0].x
+			let minY = props.vertices[0].y
+			for (let i = 1; i < props.vertices.length; i++) {
+				const pt = props.vertices[i]
+				if (pt.x < minX) minX = pt.x
+				if (pt.y < minY) minY = pt.y
+			}
+			cabinetX.value = minX + 30.0
+			cabinetY.value = minY + 30.0
+		} else {
+			cabinetX.value = 150.0
+			cabinetY.value = 150.0
+		}
 		cabinetAngle.value = 0.0
 		isCabinetInitialized.value = true
 	}
 
 	const initDoor = () => {
-		if (props.vertices.length < 4) return
-		const pbl = props.vertices[3]
-		const pbr = props.vertices[2]
-		const dx = pbr.x - pbl.x
-		const dy = pbr.y - pbl.y
-		const len = Math.sqrt(dx * dx + dy * dy)
-
-		if (len > 0) {
-			const w = len / 3.0
-			doorWidth.value = w
-			const ux = dx / len
-			const uy = dy / len
-			doorX.value = pbl.x + ux * (w / 2.0)
-			doorY.value = pbl.y + uy * (w / 2.0)
-			doorAngle.value = Math.atan2(dy, dx)
-		} else {
+		if (props.vertices.length >= 3) {
+			let minX = props.vertices[0].x
+			let maxY = props.vertices[0].y
+			for (let i = 1; i < props.vertices.length; i++) {
+				const pt = props.vertices[i]
+				if (pt.x < minX) minX = pt.x
+				if (pt.y > maxY) maxY = pt.y
+			}
+			doorX.value = minX + 50.0
+			doorY.value = maxY
 			doorWidth.value = 40.0
-			doorX.value = pbl.x
-			doorY.value = pbl.y
+			doorAngle.value = 0.0
+
+			const segments = generateWallSegments(props.vertices)
+			const snapRes = snapDoorToWall({ x: doorX.value, y: doorY.value } as Point, segments, 999999.0)
+			if (snapRes['isSnapped'] as boolean) {
+				doorX.value = snapRes['x'] as number
+				doorY.value = snapRes['y'] as number
+				doorAngle.value = snapRes['angle'] as number
+			}
+		} else {
+			doorX.value = 0.0
+			doorY.value = 0.0
+			doorWidth.value = 40.0
 			doorAngle.value = 0.0
 		}
 		isDoorInitialized.value = true
@@ -160,6 +196,14 @@
 		draw()
 	})
 
+	watch(() => props.isClosed, (newClosed) => {
+		if (newClosed) {
+			initCabinet()
+			initDoor()
+			draw()
+		}
+	})
+
 	watch(() => props.vertices, (newVertices) => {
 		if (newVertices.length >= 3) {
 			if (!isDoorInitialized.value || !isDoorManuallyPlaced.value) {
@@ -180,14 +224,14 @@
 			if (isCabinetInitialized.value) {
 				drawCabinet(
 					ctx,
-					cabinetX.value,
-					cabinetY.value,
+					cabinetX.value * props.zoom + props.panX,
+					cabinetY.value * props.zoom + props.panY,
 					cabinetAngle.value,
 					props.cabinetStyle,
 					COLOR_CABINET,
 					isDraggingCabinet.value,
 					isRotatingCabinet.value,
-					cabinetScale.value,
+					cabinetScale.value * props.zoom,
 					activeObjectType.value === 'cabinet'
 				)
 			}
@@ -195,10 +239,10 @@
 			if (isDoorInitialized.value) {
 				drawDoor(
 					ctx,
-					doorX.value,
-					doorY.value,
+					doorX.value * props.zoom + props.panX,
+					doorY.value * props.zoom + props.panY,
 					doorAngle.value,
-					doorWidth.value,
+					doorWidth.value * props.zoom,
 					doorThickness.value,
 					isDragging.value,
 					isRotating.value,
@@ -207,6 +251,10 @@
 			}
 
 			drawLegends(ctx, canvas.offsetWidth, canvas.offsetHeight)
+		}
+
+		if (props.drawLabelsFn != null) {
+			props.drawLabelsFn!(ctx, canvas.offsetWidth, canvas.offsetHeight)
 		}
 	}
 
@@ -218,14 +266,18 @@
 		const tx = touch.x
 		const ty = touch.y
 
+		// Translate screen coordinates to virtual coordinates
+		const vx = (tx - props.panX) / props.zoom
+		const vy = (ty - props.panY) / props.zoom
+
 		// 1. 如果大门已选中，检测其特有的手持控制（旋转、拉伸）
 		if (activeObjectType.value === 'door') {
 			const rp = getDoorRotationHandlePos(doorX.value, doorY.value, doorAngle.value, doorWidth.value)
 			const rx = rp.x
 			const ry = rp.y
-			const distRotate = Math.sqrt((tx - rx) * (tx - rx) + (ty - ry) * (ty - ry))
+			const distRotate = Math.sqrt((vx - rx) * (vx - rx) + (vy - ry) * (vy - ry))
 
-			if (distRotate < 25) {
+			if (distRotate < 25 / props.zoom) {
 				isRotating.value = true
 				return
 			}
@@ -239,16 +291,16 @@
 			const dgx2 = doorX.value + dlx2 * Math.cos(dAngle)
 			const dgy2 = doorY.value + dlx2 * Math.sin(dAngle)
 
-			const distDoorL = Math.sqrt((tx - dgx1) * (tx - dgx1) + (ty - dgy1) * (ty - dgy1))
-			const distDoorR = Math.sqrt((tx - dgx2) * (tx - dgx2) + (ty - dgy2) * (ty - dgy2))
+			const distDoorL = Math.sqrt((vx - dgx1) * (vx - dgx1) + (vy - dgy1) * (vy - dgy1))
+			const distDoorR = Math.sqrt((vx - dgx2) * (vx - dgx2) + (vy - dgy2) * (vy - dgy2))
 
-			if (distDoorL < 20) {
+			if (distDoorL < 20 / props.zoom) {
 				isScalingDoor.value = true
 				draggedDoorEnd.value = 0
 				anchorX.value = dgx2
 				anchorY.value = dgy2
 				return
-			} else if (distDoorR < 20) {
+			} else if (distDoorR < 20 / props.zoom) {
 				isScalingDoor.value = true
 				draggedDoorEnd.value = 1
 				anchorX.value = dgx1
@@ -267,16 +319,16 @@
 			const cRotX = cabinetX.value + 30.0 * cs * Math.sin(cAngle)
 			const cRotY = cabinetY.value - 30.0 * cs * Math.cos(cAngle)
 
-			const distCabinetMove = Math.sqrt((tx - cDragX) * (tx - cDragX) + (ty - cDragY) * (ty - cDragY))
-			const distCabinetRotate = Math.sqrt((tx - cRotX) * (tx - cRotX) + (ty - cRotY) * (ty - cRotY))
+			const distCabinetMove = Math.sqrt((vx - cDragX) * (vx - cDragX) + (vy - cDragY) * (vy - cDragY))
+			const distCabinetRotate = Math.sqrt((vx - cRotX) * (vx - cRotX) + (vy - cRotY) * (vy - cRotY))
 
-			if (distCabinetRotate < 25) {
+			if (distCabinetRotate < 25 / props.zoom) {
 				isRotatingCabinet.value = true
 				return
-			} else if (distCabinetMove < 25) {
+			} else if (distCabinetMove < 25 / props.zoom) {
 				isDraggingCabinet.value = true
-				dragStartOffsetX.value = tx - cabinetX.value
-				dragStartOffsetY.value = ty - cabinetY.value
+				dragStartOffsetX.value = vx - cabinetX.value
+				dragStartOffsetY.value = vy - cabinetY.value
 				return
 			}
 
@@ -286,8 +338,8 @@
 			for (let i = 0; i < 4; i++) {
 				const cgx = cabinetX.value + clx[i] * Math.cos(cAngle) - cly[i] * Math.sin(cAngle)
 				const cgy = cabinetY.value + clx[i] * Math.sin(cAngle) + cly[i] * Math.cos(cAngle)
-				const distCorner = Math.sqrt((tx - cgx) * (tx - cgx) + (ty - cgy) * (ty - cgy))
-				if (distCorner < 20) {
+				const distCorner = Math.sqrt((vx - cgx) * (vx - cgx) + (vy - cgy) * (vy - cgy))
+				if (distCorner < 20 / props.zoom) {
 					isScalingCabinet.value = true
 					draggedCornerIndex.value = i
 					const oppIdx = (i + 2) % 4
@@ -299,8 +351,8 @@
 		}
 
 		// 3. 都没有选中手柄，检测点击物体本体激活选中
-		const distDoorBody = Math.sqrt((tx - doorX.value) * (tx - doorX.value) + (ty - doorY.value) * (ty - doorY.value))
-		if (distDoorBody < 25.0) {
+		const distDoorBody = Math.sqrt((vx - doorX.value) * (vx - doorX.value) + (vy - doorY.value) * (vy - doorY.value))
+		if (distDoorBody < 25.0 / props.zoom) {
 			activeObjectType.value = 'door'
 			isDragging.value = true
 			draw()
@@ -308,12 +360,12 @@
 		}
 
 		if (isCabinetInitialized.value) {
-			const distCabinetBody = Math.sqrt((tx - cabinetX.value) * (tx - cabinetX.value) + (ty - cabinetY.value) * (ty - cabinetY.value))
-			if (distCabinetBody < 30.0) {
+			const distCabinetBody = Math.sqrt((vx - cabinetX.value) * (vx - cabinetX.value) + (vy - cabinetY.value) * (vy - cabinetY.value))
+			if (distCabinetBody < 30.0 / props.zoom) {
 				activeObjectType.value = 'cabinet'
 				isDraggingCabinet.value = true
-				dragStartOffsetX.value = tx - cabinetX.value
-				dragStartOffsetY.value = ty - cabinetY.value
+				dragStartOffsetX.value = vx - cabinetX.value
+				dragStartOffsetY.value = vy - cabinetY.value
 				draw()
 				return
 			}
@@ -334,11 +386,15 @@
 		const tx = touch.x
 		const ty = touch.y
 
+		// Translate screen coordinates to virtual coordinates
+		const vx = (tx - props.panX) / props.zoom
+		const vy = (ty - props.panY) / props.zoom
+
 		if (isDragging.value) {
 			isDoorManuallyPlaced.value = true
 			if (props.vertices.length >= 3) {
 				const segments = generateWallSegments(props.vertices)
-				const snapRes = snapDoorToWall({ x: tx, y: ty } as Point, segments, 60.0)
+				const snapRes = snapDoorToWall({ x: vx, y: vy } as Point, segments, 60.0 / props.zoom)
 				if (snapRes['isSnapped'] as boolean) {
 					doorX.value = snapRes['x'] as number
 					doorY.value = snapRes['y'] as number
@@ -353,7 +409,7 @@
 						doorAngle.value = wallAngle + Math.PI
 					}
 				} else {
-					const forceSnapRes = snapDoorToWall({ x: tx, y: ty } as Point, segments, 999999.0)
+					const forceSnapRes = snapDoorToWall({ x: vx, y: vy } as Point, segments, 999999.0)
 					doorX.value = forceSnapRes['x'] as number
 					doorY.value = forceSnapRes['y'] as number
 					
@@ -371,30 +427,30 @@
 			draw()
 		} else if (isRotating.value) {
 			isDoorManuallyPlaced.value = true
-			const dx = tx - doorX.value
-			const dy = ty - doorY.value
+			const dx = vx - doorX.value
+			const dy = vy - doorY.value
 			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
 			doorAngle.value = rawAngle
 			draw()
 		} else if (isScalingDoor.value) {
 			isDoorManuallyPlaced.value = true
-			const doorRes = calculateDoorScaleAndPos(tx, ty, anchorX.value, anchorY.value, doorAngle.value, draggedDoorEnd.value)
+			const doorRes = calculateDoorScaleAndPos(vx, vy, anchorX.value, anchorY.value, doorAngle.value, draggedDoorEnd.value)
 			doorX.value = doorRes['x'] as number
 			doorY.value = doorRes['y'] as number
 			doorWidth.value = doorRes['width'] as number
 			draw()
 		} else if (isDraggingCabinet.value) {
-			cabinetX.value = tx - dragStartOffsetX.value
-			cabinetY.value = ty - dragStartOffsetY.value
+			cabinetX.value = vx - dragStartOffsetX.value
+			cabinetY.value = vy - dragStartOffsetY.value
 			draw()
 		} else if (isRotatingCabinet.value) {
-			const dx = tx - cabinetX.value
-			const dy = ty - cabinetY.value
+			const dx = vx - cabinetX.value
+			const dy = vy - cabinetY.value
 			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
 			cabinetAngle.value = rawAngle
 			draw()
 		} else if (isScalingCabinet.value) {
-			const cabRes = calculateCabinetScaleAndPos(tx, ty, anchorX.value, anchorY.value, cabinetAngle.value, draggedCornerIndex.value, props.cabinetStyle)
+			const cabRes = calculateCabinetScaleAndPos(vx, vy, anchorX.value, anchorY.value, cabinetAngle.value, draggedCornerIndex.value, props.cabinetStyle)
 			cabinetX.value = cabRes['x'] as number
 			cabinetY.value = cabRes['y'] as number
 			cabinetScale.value = cabRes['scale'] as number

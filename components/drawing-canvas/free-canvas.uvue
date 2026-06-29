@@ -5,9 +5,13 @@
 			canvas-id="freeCanvas"
 			:active-step="activeStep"
 			:draw-fn="drawFree"
+			:draw-labels-fn="drawFreeLabels"
 			:vertices="points"
 			:is-closed="isClosed"
 			:cabinet-style="cabinetStyle"
+			:zoom="currentViewport.zoom"
+			:pan-x="currentViewport.panX"
+			:pan-y="currentViewport.panY"
 			@canvas-touchstart="onTouchStart"
 			@canvas-touchmove="onTouchMove"
 			@canvas-touchend="onTouchEnd"
@@ -69,6 +73,10 @@
 	const getViewport = () : Viewport => {
 		return getFreeViewport(points.value, isDrawingNew.value, tempEndPoint.value, canvasWidth.value, canvasHeight.value)
 	}
+
+	const currentViewport = computed(() : Viewport => {
+		return getViewport()
+	})
 
 	// Calculate area using the Shoelace formula
 	const calculateArea = () : number => {
@@ -236,7 +244,7 @@
 		}
 	}
 
-	// Main free canvas drawing function
+	// Main free canvas drawing function (Draws room shape first)
 	const drawFree = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
 		// Update canvas dimensions
 		canvasWidth.value = width
@@ -332,8 +340,15 @@
 			ctx.stroke()
 			ctx.restore()
 		}
+	}
 
-		// 4. Draw segment length labels
+	// 2D Annotations Rendering Function (Runs last to have highest z-index)
+	const drawFreeLabels = (ctx : CanvasRenderingContext2D, width : number, height : number) => {
+		if (points.value.length === 0) return
+
+		const vp = getViewport()
+
+		// 1. Draw segment length labels
 		const n = points.value.length
 		if (n > 0) {
 			const limit = isClosed.value ? n : n - 1
@@ -372,7 +387,7 @@
 			}
 		}
 
-		// 5. Draw vertices circles
+		// 2. Draw vertices circles
 		for (let i = 0; i < points.value.length; i++) {
 			const pt = points.value[i]
 			const px = pt.x * vp.zoom + vp.panX
