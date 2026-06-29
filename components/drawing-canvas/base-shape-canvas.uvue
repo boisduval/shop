@@ -196,12 +196,18 @@
 		draw()
 	})
 
-	watch(() => props.isClosed, (newClosed) => {
-		if (newClosed) {
-			initCabinet()
-			initDoor()
-			draw()
+	watch(() => props.isClosed, (newVal) => {
+		if (!newVal) {
+			isDoorInitialized.value = false
+			isCabinetInitialized.value = false
+			activeObjectType.value = 'none'
+		} else {
+			if (props.vertices.length >= 3) {
+				initCabinet()
+				initDoor()
+			}
 		}
+		draw()
 	})
 
 	watch(() => props.vertices, (newVertices) => {
