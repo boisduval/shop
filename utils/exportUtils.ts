@@ -76,7 +76,8 @@ export function generateAndSaveReport(
 	instance: any,
 	templateKey: string,
 	formData: Record<string, any>,
-	imageData: string
+	imageData: string,
+	onSuccess ?: () => void
 ) {
 	uni.showLoading({
 		title: '生成并导出中...'
@@ -229,11 +230,9 @@ export function generateAndSaveReport(
 									link.download = customName
 									link.href = res2.tempFilePath
 									link.click()
-									uni.showModal({
-										title: '导出成功',
-										content: '报告已成功生成并下载。',
-										showCancel: false
-									})
+									if (onSuccess != null) {
+										onSuccess()
+									}
 									// #endif
 
 									// #ifndef H5
@@ -255,16 +254,14 @@ export function generateAndSaveReport(
 									uni.saveImageToPhotosAlbum({
 										filePath: saveFilePath,
 										success: () => {
-											uni.showModal({
-												title: '导出成功',
-												content: `报告【${customName}】已成功保存到相册。`,
-												showCancel: false
-											})
+											if (onSuccess != null) {
+												onSuccess()
+											}
 										},
 										fail: (saveErr) => {
 											console.error('保存相册失败:', saveErr)
 											uni.showModal({
-												title: '导出成功',
+												title: '保存相册失败',
 												content: '报告已生成临时文件，但保存至相册失败，请检查相册权限。',
 												showCancel: false
 											})

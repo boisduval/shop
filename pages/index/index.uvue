@@ -167,7 +167,19 @@
 			instance,
 			selectedTemplateValue.value,
 			collectedFormData.value,
-			exportedDrawingImage.value
+			exportedDrawingImage.value,
+			() => {
+				uni.showToast({
+					title: '保存成功',
+					icon: 'success',
+					duration: 3000
+				})
+				setTimeout(() => {
+					uni.reLaunch({
+						url: '/pages/index/index'
+					})
+				}, 1000)
+			}
 		)
 	}
 </script>
