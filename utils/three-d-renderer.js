@@ -526,7 +526,10 @@ export function createThreeScene(canvas, data, baseUrl) {
     antialias: true,
   });
   renderer.setSize(width, height);
-  renderer.setPixelRatio(2);
+  const pixelRatio = (typeof wx !== "undefined" && wx.getSystemInfoSync)
+    ? wx.getSystemInfoSync().pixelRatio
+    : (typeof window !== "undefined" ? window.devicePixelRatio : 2);
+  renderer.setPixelRatio(pixelRatio);
 
   // Support older Three.js versions (like r108 used in WeChat Mini Program)
   renderer.gammaOutput = true;
