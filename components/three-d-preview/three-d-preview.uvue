@@ -6,7 +6,7 @@
 			<view class="header-bar">
 				<view class="title-container">
 					<!-- 3D 线性小立方体 SVG 图标 -->
-					<image class="icon-cube" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'%3E%3C/path%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'%3E%3C/polyline%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'%3E%3C/line%3E%3C/svg%3E"></image>
+					<image class="icon-cube" src="/static/3d-cube-blue.svg"></image>
 					<text class="title">3D 预览</text>
 				</view>
 				<view class="close-click-area" @tap="onClose">
@@ -16,30 +16,31 @@
 
 			<!-- 内嵌 3D 画布区域 -->
 			<view class="canvas-container">
-				<canvas 
-					type="webgl" 
-					id="three-canvas" 
-					class="three-canvas"
-					@touchstart="onTouchStartEvent"
-					@touchmove="onTouchMoveEvent"
-					@touchend="onTouchEndEvent"
-				></canvas>
-				
+				<canvas type="webgl" id="three-canvas" class="three-canvas" @touchstart="onTouchStartEvent"
+					@touchmove="onTouchMoveEvent" @touchend="onTouchEndEvent"></canvas>
+
 
 				<!-- 左下角操作提示 (浮动 HUD, 使用 cover-view) -->
-				<cover-view class="instruction-card pointer-events-none">
-					<cover-view class="instruction-text">单指：旋转视图</cover-view>
-					<cover-view class="instruction-text mt-1">双指：缩放视图</cover-view>
+				<cover-view class="instruction-container pointer-events-none">
+					<cover-view class="instruction-card">
+						<cover-view class="instruction-text">单指：旋转视图</cover-view>
+					</cover-view>
+					<cover-view class="instruction-card mt-1">
+						<cover-view class="instruction-text">双指：缩放视图</cover-view>
+					</cover-view>
 				</cover-view>
+
 
 				<!-- 右下角图例 (浮动 HUD, 使用 cover-view) -->
 				<cover-view class="legend-card">
 					<cover-view class="legend-item mr-3">
-						<cover-view class="legend-color bg-door"></cover-view>
+						<cover-view class="legend-icon">
+							<cover-image src="/static/door.png" class="legend-icon-door" mode="aspectFit"></cover-image>
+						</cover-view>
 						<cover-view class="legend-text">大门</cover-view>
 					</cover-view>
 					<cover-view class="legend-item">
-						<cover-view class="legend-color bg-cabinet"></cover-view>
+						<cover-image src="/static/fYCbXMFM4.png" class="legend-icon" mode="aspectFill"></cover-image>
 						<cover-view class="legend-text">烟柜</cover-view>
 					</cover-view>
 				</cover-view>
@@ -65,11 +66,11 @@
 
 	const instance = getCurrentInstance()!.proxy
 
-	let activeCamera: any = null
-	let activeRenderer: any = null
-	let activeScene: any = null
+	let activeCamera : any = null
+	let activeRenderer : any = null
+	let activeScene : any = null
 
-	const initCanvas = (canvas: any) => {
+	const initCanvas = (canvas : any) => {
 		let baseUrl = '';
 		// #ifdef H5 || MP-WEIXIN
 		if (typeof window !== 'undefined' && window.location && window.location.origin) {
@@ -107,11 +108,11 @@
 		// #endif
 	})
 
-	const onTouchStartEvent = (e: TouchEvent) => {
+	const onTouchStartEvent = (e : TouchEvent) => {
 		onTouchStart(e)
 	}
 
-	const onTouchMoveEvent = (e: TouchEvent) => {
+	const onTouchMoveEvent = (e : TouchEvent) => {
 		if (activeCamera != null && activeRenderer != null && activeScene != null) {
 			onTouchMove(e, activeCamera, activeRenderer, activeScene)
 		}
@@ -201,7 +202,7 @@
 		border-radius: 16px;
 		position: relative;
 		overflow: hidden;
-		box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
+		box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.06);
 		transform: translateY(0);
 	}
 
@@ -213,21 +214,24 @@
 
 
 	/* HUD Styling */
-	.instruction-card {
+	.instruction-container {
 		position: absolute;
 		left: 20px;
 		bottom: 20px;
-		background-color: rgba(255, 255, 255, 0.9);
-		border: 1px solid #cbd5e1;
-		border-radius: 6px;
-		padding: 6px 10px;
 		z-index: 10;
 		flex-direction: column;
 	}
 
+	.instruction-card {
+		background-color: #ffffff;
+		border-radius: 6px;
+		padding: 6px 12px;
+		box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+	}
+
 	.instruction-text {
-		font-size: 10px;
-		color: #64748b;
+		font-size: 11px;
+		color: #334155;
 		font-weight: 500;
 	}
 
@@ -235,13 +239,13 @@
 		position: absolute;
 		right: 20px;
 		bottom: 20px;
-		background-color: rgba(255, 255, 255, 0.9);
-		border: 1px solid #cbd5e1;
-		border-radius: 8px;
-		padding: 6px 12px;
+		background-color: #ffffff;
+		border-radius: 12px;
+		padding: 10px 16px;
 		z-index: 10;
 		flex-direction: row;
 		align-items: center;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 	}
 
 	.legend-item {
@@ -256,12 +260,19 @@
 		margin-right: 4px;
 	}
 
-	.bg-door {
-		background-color: #527EBF;
+	.legend-icon {
+		width: 24px;
+		height: 24px;
+		border-radius: 4px;
+		margin-right: 6px;
+		border: 1px solid #e2e8f0;
+		justify-content: center;
+		align-items: center;
 	}
 
-	.bg-cabinet {
-		background-color: #B57474;
+	.legend-icon-door {
+		width: 18px;
+		height: 18px;
 	}
 
 	.legend-text {
