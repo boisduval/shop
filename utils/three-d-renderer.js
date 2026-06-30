@@ -409,7 +409,9 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale) {
   const cabZM = (cabinet.y - centerY) / scale;
   const cabAngle = cabinet.angle || 0.0;
 
-  const isLShape = cabinet.cabinetStyle === 'l_shape' || cabinet.cabinetStyle === 'l_shape_mirror';
+  const isLShape =
+    cabinet.cabinetStyle === "l_shape" ||
+    cabinet.cabinetStyle === "l_shape_mirror";
   const baseW = isLShape ? 40.0 : 45.0; // matches 2D width in canvasUtils.ts
   const cabScaleVal = cabinet.scale || 1.0;
 
@@ -422,8 +424,7 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale) {
   if (typeof THREE.GLTFLoader === "function") {
     const loader = new THREE.GLTFLoader();
 
-    let modelPath =
-      "https://cdn.jsdelivr.net/gh/boisduval/my-assets@v1.1.0/shelf.glb";
+    let modelPath = "https://gitee.com/wafaa/my-assets/raw/main/shelf.glb";
     if (isLShape) {
       modelPath =
         "https://cdn.jsdelivr.net/gh/boisduval/my-assets@v1.1.0/danell_ridge_w556-48_ashley.glb";
