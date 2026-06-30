@@ -47,6 +47,8 @@ let lastTouchX = 0;
 let lastTouchY = 0;
 let isDragging = false;
 let lastTouchDist = 0;
+let lastTouchMidX = 0;
+let lastTouchMidY = 0;
 
 function updateCameraPosition(camera) {
   phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, phi)); // Stay above ground
@@ -675,6 +677,8 @@ export function onTouchStart(e) {
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
     lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+    lastTouchMidX = (touches[0].clientX + touches[1].clientX) / 2;
+    lastTouchMidY = (touches[0].clientY + touches[1].clientY) / 2;
   }
 }
 
@@ -706,10 +710,37 @@ export function onTouchMove(e, camera, renderer, scene) {
       camera.updateProjectionMatrix();
     }
     lastTouchDist = dist;
+
+    const midX = (touches[0].clientX + touches[1].clientX) / 2;
+    const midY = (touches[0].clientY + touches[1].clientY) / 2;
+    if (lastTouchMidX > 0 && lastTouchMidY > 0) {
+      const deltaX = midX - lastTouchMidX;
+      const deltaY = midY - lastTouchMidY;
+
+      const vX = new THREE.Vector3();
+      const vY = new THREE.Vector3();
+      const vZ = new THREE.Vector3();
+      camera.matrix.extractBasis(vX, vY, vZ);
+
+      const canvasHeight = renderer.domElement ? (renderer.domElement.clientHeight || renderer.domElement.height || 300) : 300;
+      const scaleFactor = (camera.top - camera.bottom) / (canvasHeight * camera.zoom);
+
+      const panX = -deltaX * scaleFactor;
+      const panY = deltaY * scaleFactor;
+
+      lookAtTarget.addScaledVector(vX, panX);
+      lookAtTarget.addScaledVector(vY, panY);
+
+      updateCameraPosition(camera);
+    }
+    lastTouchMidX = midX;
+    lastTouchMidY = midY;
   }
 }
 
 export function onTouchEnd() {
   isDragging = false;
   lastTouchDist = 0;
+  lastTouchMidX = 0;
+  lastTouchMidY = 0;
 }
