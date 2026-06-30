@@ -549,6 +549,7 @@
 		res['cabinetY'] = cabinetY.value
 		res['cabinetAngle'] = cabinetAngle.value
 		res['cabinetScale'] = cabinetScale.value
+		res['cabinetStyle'] = props.cabinetStyle
 		res['vertices'] = props.vertices
 		res['width'] = canvasWidth.value
 		res['height'] = canvasHeight.value

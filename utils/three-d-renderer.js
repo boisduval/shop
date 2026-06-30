@@ -409,46 +409,33 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale) {
   const cabZM = (cabinet.y - centerY) / scale;
   const cabAngle = cabinet.angle || 0.0;
 
-  const baseW = 1.0;
-  const baseD = 0.6;
+  const isLShape = cabinet.cabinetStyle === 'l_shape' || cabinet.cabinetStyle === 'l_shape_mirror';
+  const baseW = isLShape ? 40.0 : 45.0; // matches 2D width in canvasUtils.ts
   const cabScaleVal = cabinet.scale || 1.0;
 
-  const finalW = baseW * cabScaleVal;
-  const finalD = baseD * cabScaleVal;
+  const finalW = (baseW * cabScaleVal) / scale;
 
   const cabinetGroup = new THREE.Group();
   cabinetGroup.position.set(cabXM, 0, cabZM);
   cabinetGroup.rotation.y = -cabAngle;
 
-  console.log(
-    "placeCabinet: entering with cabinet data:",
-    JSON.stringify(cabinet),
-  );
   if (typeof THREE.GLTFLoader === "function") {
-    console.log("placeCabinet: THREE.GLTFLoader is registered successfully.");
     const loader = new THREE.GLTFLoader();
 
-    const modelPath =
+    let modelPath =
       "https://cdn.jsdelivr.net/gh/boisduval/my-assets@v1.1.0/shelf.glb";
-    console.log(
-      "placeCabinet: Starting GLTFLoader.load for modelPath:",
-      modelPath,
-    );
+    if (isLShape) {
+      modelPath =
+        "https://cdn.jsdelivr.net/gh/boisduval/my-assets@v1.1.0/danell_ridge_w556-48_ashley.glb";
+    }
 
     loader.load(
       modelPath,
       (gltf) => {
-        console.log("placeCabinet: GLTF model loaded successfully!", gltf);
         const model = gltf.scene.clone();
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
         box.getSize(size);
-        console.log(
-          "placeCabinet: Loaded model original size:",
-          size.x,
-          size.y,
-          size.z,
-        );
 
         if (size.x > 0.001) {
           const scaleFactor = finalW / size.x;
@@ -462,12 +449,6 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale) {
             -scaledCenter.x,
             -scaledBox.min.y,
             -scaledCenter.z,
-          );
-          console.log(
-            "placeCabinet: Scaled model bounding box size:",
-            finalW,
-            "scaleFactor:",
-            scaleFactor,
           );
         } else {
           console.warn(
@@ -484,31 +465,13 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale) {
         });
 
         cabinetGroup.add(model);
-        console.log("placeCabinet: Model added to cabinetGroup successfully.");
       },
-      (xhr) => {
-        if (xhr && xhr.total) {
-          console.log(
-            "placeCabinet: loading progress:",
-            (xhr.loaded / xhr.total) * 100 + "%",
-          );
-        } else {
-          console.log("placeCabinet: loading...");
-        }
-      },
+      undefined,
       (err) => {
         console.error(
           "placeCabinet: Failed to load GLTF model. Error details:",
           err,
         );
-        if (err && typeof err === "object") {
-          console.error(
-            "placeCabinet: Error object properties:",
-            Object.keys(err),
-            err.message,
-            err.stack,
-          );
-        }
       },
     );
   } else {
@@ -635,6 +598,7 @@ export function createThreeScene(canvas, data, baseUrl) {
             y: data.cabinetY,
             angle: data.cabinetAngle,
             scale: data.cabinetScale,
+            cabinetStyle: data.cabinetStyle,
           }
         : null;
     placeCabinet(scene, cabinetData, centerX, centerY, SCALE_FACTOR);
