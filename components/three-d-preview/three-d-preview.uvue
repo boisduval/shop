@@ -94,39 +94,7 @@
 				if (res.length > 0 && res[0] != null) {
 					const canvas = res[0]['node']
 					if (canvas != null) {
-						// Determine which model subpackage to load based on cabinetType
-						let subPackageName = 'model-shelf5';
-						const cabType = props.roomData['cabinetStyle'] || props.roomData['cabinetType'];
-						if (cabType == 'l_shape') {
-							subPackageName = 'model-lshape';
-						} else if (cabType == 'convex') {
-							subPackageName = 'model-convex';
-						}
-
-						// #ifdef MP-WEIXIN
-						// @ts-ignore
-						const wxObj = typeof wx !== 'undefined' ? wx : null;
-						if (wxObj != null && typeof wxObj['loadSubPackage'] === 'function') {
-							const loadSubPackageFn = wxObj['loadSubPackage'] as Function;
-							loadSubPackageFn({
-								root: 'subpackages/three-d',
-								success: () => {
-									console.log('Successfully loaded subpackage: subpackages/three-d');
-									initCanvas(canvas);
-								},
-								fail: (err : any) => {
-									console.error('Failed to load subpackage: subpackages/three-d', err);
-									initCanvas(canvas);
-								}
-							});
-						} else {
-							initCanvas(canvas);
-						}
-						// #endif
-
-						// #ifdef H5
 						initCanvas(canvas);
-						// #endif
 					}
 				}
 			})
