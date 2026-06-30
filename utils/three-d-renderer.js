@@ -4,8 +4,8 @@ let THREE;
 
 // Configuration constants
 const WALL_HEIGHT = 2.5; // meters
-const WALL_THICKNESS = 0.15; // meters
-const DOOR_HEIGHT = 2.0; // meters
+const WALL_THICKNESS = 0.4; // meters, matching web version exactly
+const DOOR_HEIGHT = 2.5; // meters, matching wall height exactly
 const CABINET_HEIGHT = 2.0; // meters
 const SCALE_FACTOR = 10.0; // 10 pixels = 1 meter, matching web version exactly
 
@@ -93,7 +93,7 @@ function loadTextureWithFallback(loader, path, onSuccess, onError) {
 
 
 let theta = Math.PI / 4; 
-let phi = Math.PI / 4;   
+let phi = 0.9553; // Aligns starting perspective with web camera position (20, 20, 20)
 let radius = 35; // Adjusted to match web version's camera distance (sqrt(20^2 + 20^2 + 20^2) ≈ 35)
 let lookAtTarget = null;
 
@@ -175,7 +175,7 @@ function buildFloor(scene, vertices, centerX, centerY, scale, canvasNode) {
 		(tex) => {
 			tex.wrapS = THREE.RepeatWrapping;
 			tex.wrapT = THREE.RepeatWrapping;
-			tex.repeat.set(1.5, 1.5);
+			tex.repeat.set(0.25, 0.25);
 			floorMat.map = tex;
 			floorMat.needsUpdate = true;
 		},
@@ -284,20 +284,34 @@ function buildWalls(scene, wallMat, vertices, door, centerX, centerY, scale) {
 				createWallSegment(scene, wallMat, xr1, zr1, x2, z2, WALL_HEIGHT, WALL_THICKNESS, 0);
 			}
 
-			// 3. Lintel Wall
+			// 3. Lintel Wall (Only draw if door height is lower than wall height)
 			if (rightCut > leftCut) {
-				const xl2 = x1 + leftCut * uX;
-				const zl2 = z1 + leftCut * uZ;
-				const xr1 = x1 + rightCut * uX;
-				const zr1 = z1 + rightCut * uZ;
 				const lintelHeight = WALL_HEIGHT - DOOR_HEIGHT;
-				createWallSegment(scene, wallMat, xl2, zl2, xr1, zr1, lintelHeight, WALL_THICKNESS, DOOR_HEIGHT);
+				if (lintelHeight > 0.05) {
+					const xl2 = x1 + leftCut * uX;
+					const zl2 = z1 + leftCut * uZ;
+					const xr1 = x1 + rightCut * uX;
+					const zr1 = z1 + rightCut * uZ;
+					createWallSegment(scene, wallMat, xl2, zl2, xr1, zr1, lintelHeight, WALL_THICKNESS, DOOR_HEIGHT);
+				}
 			}
 
 			// Build Door representation inside opening
 			placeDoor(scene, door, centerX, centerY, scale);
 		}
 	}
+
+	// Pillars at corners to fill gaps (matching web version exactly)
+	const pillarGeo = new THREE.BoxGeometry(0.4, WALL_HEIGHT, 0.4);
+	vertices.forEach((p) => {
+		const pX = (p.x - centerX) / scale;
+		const pZ = (p.y - centerY) / scale; // Note: y corresponds to Z in 3D
+		const pillar = new THREE.Mesh(pillarGeo, wallMat);
+		pillar.position.set(pX, WALL_HEIGHT / 2, pZ);
+		pillar.castShadow = true;
+		pillar.receiveShadow = true;
+		scene.add(pillar);
+	});
 }
 
 // Helper: Create a golden metal handle procedurally
@@ -344,7 +358,7 @@ function placeDoor(scene, door, centerX, centerY, scale) {
 
 	// Wooden door frame & leaf panel with texture loading
 	const woodMat = new THREE.MeshStandardMaterial({
-		color: 0xffffff,
+		color: 0x8b5a2b, // fallback and tint wood brown
 		roughness: 0.7,
 		metalness: 0.1
 	});
@@ -364,32 +378,20 @@ function placeDoor(scene, door, centerX, centerY, scale) {
 		}
 	);
 	
-	const leafGeo = new THREE.BoxGeometry(doorWM, DOOR_HEIGHT, 0.08);
+	const leafGeo = new THREE.BoxGeometry(doorWM, DOOR_HEIGHT, 0.3);
 	const leaf = new THREE.Mesh(leafGeo, woodMat);
 	leaf.position.y = DOOR_HEIGHT / 2;
 	leaf.castShadow = true;
 	leaf.receiveShadow = true;
 	group.add(leaf);
 
-	// Glass pane inside door for modern look
-	const glassGeo = new THREE.BoxGeometry(doorWM - 0.2, DOOR_HEIGHT - 0.4, 0.02);
-	const glassMat = new THREE.MeshStandardMaterial({
-		color: 0xe2f1ff,
-		transparent: true,
-		opacity: 0.4,
-		roughness: 0.1
-	});
-	const glass = new THREE.Mesh(glassGeo, glassMat);
-	glass.position.set(0, DOOR_HEIGHT / 2, 0);
-	group.add(glass);
-
-	// Procedural golden handles
+	// Procedural golden handles matching web position
 	const outerHandle = createGoldenHandle(true);
-	outerHandle.position.set(doorWM / 2 - 0.08, DOOR_HEIGHT / 2, 0.05);
+	outerHandle.position.set(doorWM / 2 - 0.6, DOOR_HEIGHT / 2, 0.15);
 	group.add(outerHandle);
 
 	const innerHandle = createGoldenHandle(false);
-	innerHandle.position.set(doorWM / 2 - 0.08, DOOR_HEIGHT / 2, -0.05);
+	innerHandle.position.set(doorWM / 2 - 0.6, DOOR_HEIGHT / 2, -0.15);
 	group.add(innerHandle);
 
 	scene.add(group);
