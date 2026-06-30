@@ -111,6 +111,12 @@
 			} else {
 				callback('')
 			}
+		},
+		get3dData: () : Record<string, any> | null => {
+			if (baseCanvasRef.value != null) {
+				return baseCanvasRef.value!.$callMethod('get3dData') as Record<string, any>
+			}
+			return null
 		}
 	})
 </script>

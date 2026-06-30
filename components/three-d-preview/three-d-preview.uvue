@@ -1,0 +1,308 @@
+<template>
+	<view class="three-d-wrapper" @tap="onClose">
+		<!-- 底部弹窗容器 -->
+		<view class="drawer-content" @tap.stop>
+			<!-- 头部标题栏 -->
+			<view class="header-bar">
+				<view class="title-container">
+					<!-- 3D 线性小立方体 SVG 图标 -->
+					<image class="icon-cube" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'%3E%3C/path%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'%3E%3C/polyline%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'%3E%3C/line%3E%3C/svg%3E"></image>
+					<text class="title">3D 预览</text>
+				</view>
+				<view class="close-click-area" @tap="onClose">
+					<text class="close-icon">✕</text>
+				</view>
+			</view>
+
+			<!-- 内嵌 3D 画布区域 -->
+			<view class="canvas-container">
+				<canvas 
+					type="webgl" 
+					id="three-canvas" 
+					class="three-canvas"
+					@touchstart="onTouchStartEvent"
+					@touchmove="onTouchMoveEvent"
+					@touchend="onTouchEndEvent"
+				></canvas>
+				
+
+				<!-- 左下角操作提示 (浮动 HUD, 使用 cover-view) -->
+				<cover-view class="instruction-card pointer-events-none">
+					<cover-view class="instruction-text">单指：旋转视图</cover-view>
+					<cover-view class="instruction-text mt-1">双指：缩放视图</cover-view>
+				</cover-view>
+
+				<!-- 右下角图例 (浮动 HUD, 使用 cover-view) -->
+				<cover-view class="legend-card">
+					<cover-view class="legend-item mr-3">
+						<cover-view class="legend-color bg-door"></cover-view>
+						<cover-view class="legend-text">大门</cover-view>
+					</cover-view>
+					<cover-view class="legend-item">
+						<cover-view class="legend-color bg-cabinet"></cover-view>
+						<cover-view class="legend-text">烟柜</cover-view>
+					</cover-view>
+				</cover-view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { getCurrentInstance, onMounted, onUnmounted, PropType } from 'vue'
+	import { Record } from '../../utils/types'
+	// @ts-ignore
+	import { createThreeScene, destroyThreeScene, onTouchStart, onTouchMove, onTouchEnd } from '../../utils/three-d-renderer.js'
+
+	const props = defineProps({
+		roomData: {
+			type: Object as PropType<Record<string, any>>,
+			required: true
+		}
+	})
+
+	const emit = defineEmits(['close'])
+
+	const instance = getCurrentInstance()!.proxy
+
+	let activeCamera: any = null
+	let activeRenderer: any = null
+	let activeScene: any = null
+
+	const initCanvas = (canvas: any) => {
+		let baseUrl = '';
+		// #ifdef H5 || MP-WEIXIN
+		if (typeof window !== 'undefined' && window.location && window.location.origin) {
+			baseUrl = window.location.origin;
+		}
+		// #endif
+		const threeObj = createThreeScene(canvas, props.roomData, baseUrl)
+		if (threeObj != null) {
+			activeCamera = threeObj['camera']
+			activeRenderer = threeObj['renderer']
+			activeScene = threeObj['scene']
+		}
+	}
+
+	onMounted(() => {
+		// #ifdef MP-WEIXIN || H5
+		uni.createSelectorQuery()
+			.in(instance)
+			.select('#three-canvas')
+			.node()
+			.exec((res) => {
+				if (res.length > 0 && res[0] != null) {
+					const canvas = res[0]['node']
+					if (canvas != null) {
+						// Determine which model subpackage to load based on cabinetType
+						let subPackageName = 'model-shelf5';
+						const cabType = props.roomData['cabinetStyle'] || props.roomData['cabinetType'];
+						if (cabType == 'l_shape') {
+							subPackageName = 'model-lshape';
+						} else if (cabType == 'convex') {
+							subPackageName = 'model-convex';
+						}
+
+						// #ifdef MP-WEIXIN
+						if (typeof uni.loadSubPackage === 'function') {
+							uni.loadSubPackage({
+								name: 'three-d',
+								success: () => {
+									initCanvas(canvas);
+								},
+								fail: (err) => {
+									console.error('Failed to load subpackage: three-d', err);
+									initCanvas(canvas);
+								}
+							});
+						} else {
+							initCanvas(canvas);
+						}
+						// #endif
+
+						// #ifdef H5
+						initCanvas(canvas);
+						// #endif
+					}
+				}
+			})
+		// #endif
+	})
+
+	onUnmounted(() => {
+		// #ifdef MP-WEIXIN || H5
+		destroyThreeScene()
+		// #endif
+	})
+
+	const onTouchStartEvent = (e: TouchEvent) => {
+		onTouchStart(e)
+	}
+
+	const onTouchMoveEvent = (e: TouchEvent) => {
+		if (activeCamera != null && activeRenderer != null && activeScene != null) {
+			onTouchMove(e, activeCamera, activeRenderer, activeScene)
+		}
+	}
+
+	const onTouchEndEvent = () => {
+		onTouchEnd()
+	}
+
+	const onClose = () => {
+		emit('close')
+	}
+</script>
+
+<style scoped>
+	.three-d-wrapper {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		background-color: rgba(15, 23, 42, 0.4);
+		z-index: 999;
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+	}
+
+	.drawer-content {
+		width: 100%;
+		height: 85%;
+		background-color: #f8fafc;
+		border-top-left-radius: 24px;
+		border-top-right-radius: 24px;
+		display: flex;
+		flex-direction: column;
+		padding: 20px;
+		box-sizing: border-box;
+		box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12);
+	}
+
+	.header-bar {
+		height: 48px;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding-bottom: 12px;
+	}
+
+	.title-container {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.icon-cube {
+		width: 18px;
+		height: 18px;
+		margin-right: 6px;
+	}
+
+	.title {
+		font-size: 16px;
+		font-weight: bold;
+		color: #1e293b;
+	}
+
+	.close-click-area {
+		width: 32px;
+		height: 32px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 16px;
+		background-color: #f1f5f9;
+	}
+
+	.close-icon {
+		font-size: 14px;
+		color: #64748b;
+		font-weight: bold;
+	}
+
+	.canvas-container {
+		flex: 1;
+		width: 100%;
+		background-color: #d1e9ff;
+		border: 1px solid #cbd5e1;
+		border-radius: 16px;
+		position: relative;
+		overflow: hidden;
+		box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
+		transform: translateY(0);
+	}
+
+	.three-canvas {
+		width: 100%;
+		height: 100%;
+	}
+
+
+
+	/* HUD Styling */
+	.instruction-card {
+		position: absolute;
+		left: 20px;
+		bottom: 20px;
+		background-color: rgba(255, 255, 255, 0.9);
+		border: 1px solid #cbd5e1;
+		border-radius: 6px;
+		padding: 6px 10px;
+		z-index: 10;
+		flex-direction: column;
+	}
+
+	.instruction-text {
+		font-size: 10px;
+		color: #64748b;
+		font-weight: 500;
+	}
+
+	.legend-card {
+		position: absolute;
+		right: 20px;
+		bottom: 20px;
+		background-color: rgba(255, 255, 255, 0.9);
+		border: 1px solid #cbd5e1;
+		border-radius: 8px;
+		padding: 6px 12px;
+		z-index: 10;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.legend-item {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.legend-color {
+		width: 12px;
+		height: 12px;
+		border-radius: 3px;
+		margin-right: 4px;
+	}
+
+	.bg-door {
+		background-color: #527EBF;
+	}
+
+	.bg-cabinet {
+		background-color: #B57474;
+	}
+
+	.legend-text {
+		font-size: 11px;
+		color: #334155;
+		font-weight: 500;
+	}
+
+	.mt-1 {
+		margin-top: 2px;
+	}
+
+	.mr-3 {
+		margin-right: 12px;
+	}
+</style>

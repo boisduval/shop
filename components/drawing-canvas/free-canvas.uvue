@@ -61,7 +61,7 @@
 	import { ref, computed, watch, PropType } from 'vue'
 	import { Record } from '../../utils/types'
 	import { Point, calculatePolygonArea } from '../../utils/canvasUtils'
-	import { Viewport, SnappedGuide, getFreeViewport, snapFreePoint, drawSegmentLabel } from '../../utils/freeCanvasUtils'
+	import { Viewport, SnappedGuide, getFreeViewport, snapFreePoint, drawSegmentLabel, pointToSegmentDistance } from '../../utils/freeCanvasUtils'
 	import BaseShapeCanvas from './base-shape-canvas.uvue'
 
 	const props = defineProps({
@@ -91,6 +91,11 @@
 	const hitRadius = ref(20.0)
 	const isSnapEnabled = ref(true)
 	const isExporting = ref(false)
+
+	// Custom segment editing states
+	const clickedSideIndex = ref(-1)
+	const startTouchX = ref(0.0)
+	const startTouchY = ref(0.0)
 
 	// Step 2: Vertex Dragging after Closure States
 	const isDraggingVertex = ref(false)
@@ -152,6 +157,10 @@
 		const touch = e.touches[0]
 		const tx = touch.x
 		const ty = touch.y
+
+		// Record initial touch coordinates
+		startTouchX.value = tx
+		startTouchY.value = ty
 
 		const vp = getViewport()
 
@@ -216,6 +225,7 @@
 	}
 
 	const onTouchEnd = (e : TouchEvent) => {
+		const touchList = e.changedTouches
 		if (isClosed.value) {
 			if (isDraggingVertex.value) {
 				isDraggingVertex.value = false
@@ -223,6 +233,51 @@
 				snappedGuide.value = null
 				emit('update:area', Math.round(calculateArea() * 100) / 100)
 				redraw()
+			} else {
+				// Click wall segment check
+				if (touchList.length > 0) {
+					const touch = touchList[0]
+					const tx = touch.x
+					const ty = touch.y
+					const travel = Math.sqrt((tx - startTouchX.value) * (tx - startTouchX.value) + (ty - startTouchY.value) * (ty - startTouchY.value))
+					
+					// Less than 5px is treated as a Tap click
+					if (travel < 5.0) {
+						const vp = getViewport()
+						const vx = (tx - vp.panX) / vp.zoom
+						const vy = (ty - vp.panY) / vp.zoom
+						const n = points.value.length
+						
+						for (let i = 0; i < n; i++) {
+							const p1 = points.value[i]
+							const p2 = points.value[(i + 1) % n]
+							const dist = pointToSegmentDistance(vx, vy, p1.x, p1.y, p2.x, p2.y)
+							
+							// Distance within 20px in screen coordinate space
+							if (dist < 20.0 / vp.zoom) {
+								clickedSideIndex.value = i
+								const distVirtual = Math.sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y))
+								const curLenM = distVirtual / SCALE
+								
+								uni.showModal({
+									title: '修改边长',
+									placeholderText: '请输入新边长(m)',
+									editable: true,
+									content: curLenM.toFixed(1),
+									success: (res) => {
+										if (res.confirm && res.content != null) {
+											const valM = parseFloat(res.content!)
+											if (!isNaN(valM) && valM > 0) {
+												applyNewLength(valM)
+											}
+										}
+									}
+								})
+								break
+							}
+						}
+					}
+				}
 			}
 			return
 		}
@@ -260,6 +315,45 @@
 		isDrawingNew.value = false
 		tempEndPoint.value = null
 		snappedGuide.value = null
+		redraw()
+	}
+
+	const applyNewLength = (valM : number) => {
+		const valPX = valM * SCALE
+		const i = clickedSideIndex.value
+		if (i === -1 || points.value.length < 3) return
+		const n = points.value.length
+		const j = (i + 1) % n
+
+		const p1 = points.value[i]
+		const p2 = points.value[j]
+
+		const dx = p2.x - p1.x
+		const dy = p2.y - p1.y
+		const oldLen = Math.sqrt(dx * dx + dy * dy)
+
+		if (oldLen > 0.1) {
+			const ratio = valPX / oldLen
+			if (j !== 0) {
+				// Branch A: shift all subsequent points
+				const shiftX = (p1.x + dx * ratio) - p2.x
+				const shiftY = (p1.y + dy * ratio) - p2.y
+				for (let k = j; k < n; k++) {
+					points.value[k] = {
+						x: points.value[k].x + shiftX,
+						y: points.value[k].y + shiftY
+					} as Point
+				}
+			} else {
+				// Branch B: only scale p1 relative to p2
+				points.value[i] = {
+					x: p2.x + (p1.x - p2.x) * ratio,
+					y: p2.y + (p1.y - p2.y) * ratio
+				} as Point
+			}
+		}
+
+		emit('update:area', Math.round(calculateArea() * 100) / 100)
 		redraw()
 	}
 
@@ -510,6 +604,12 @@
 			} else {
 				callback('')
 			}
+		},
+		get3dData: () : Record<string, any> | null => {
+			if (baseCanvasRef.value != null) {
+				return baseCanvasRef.value!.$callMethod('get3dData') as Record<string, any>
+			}
+			return null
 		}
 	})
 </script>

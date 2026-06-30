@@ -191,3 +191,27 @@ export function drawSegmentLabel(
 	ctx.textBaseline = 'middle'
 	ctx.fillText(text, x, y)
 }
+
+/**
+ * 计算点 (px, py) 到线段 (x1, y1) - (x2, y2) 的垂直距离
+ */
+export function pointToSegmentDistance(
+	px: number,
+	py: number,
+	x1: number,
+	y1: number,
+	x2: number,
+	y2: number
+): number {
+	const dx = x2 - x1
+	const dy = y2 - y1
+	const l2 = dx * dx + dy * dy
+	if (l2 === 0) {
+		return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1))
+	}
+	let t = ((px - x1) * dx + (py - y1) * dy) / l2
+	t = Math.max(0.0, Math.min(1.0, t))
+	const projX = x1 + t * dx
+	const projY = y1 + t * dy
+	return Math.sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY))
+}

@@ -539,10 +539,27 @@
 		}, 100)
 	}
 
+	const get3dData = () : Record<string, any> => {
+		const res = {} as Record<string, any>
+		res['doorX'] = doorX.value
+		res['doorY'] = doorY.value
+		res['doorAngle'] = doorAngle.value
+		res['doorWidth'] = doorWidth.value
+		res['cabinetX'] = cabinetX.value
+		res['cabinetY'] = cabinetY.value
+		res['cabinetAngle'] = cabinetAngle.value
+		res['cabinetScale'] = cabinetScale.value
+		res['vertices'] = props.vertices
+		res['width'] = canvasWidth.value
+		res['height'] = canvasHeight.value
+		return res
+	}
+
 	// 暴露一个绘制和图片导出方法给父组件
 	defineExpose({
 		redraw: draw,
-		exportImage: exportImage
+		exportImage: exportImage,
+		get3dData: get3dData
 	})
 </script>
 

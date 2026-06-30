@@ -1,0 +1,11 @@
+<template>
+	<view>
+		<text>3D Assets Dummy Page</text>
+		<!-- Force compiler to copy subpackage static assets to build directory -->
+		<image src="../static/granite_tile_04_rough_1k.jpg" style="display: none; width: 0; height: 0;"></image>
+		<image src="../static/wooden_garage_door_diff_1k.jpg" style="display: none; width: 0; height: 0;"></image>
+	</view>
+</template>
+
+<script setup lang="uts">
+</script>

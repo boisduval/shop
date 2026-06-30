@@ -7,16 +7,19 @@
 		<app-header :active-step="activeStep" :selected-template="selectedTemplateName" :steps="steps"></app-header>
 
 		<!-- 步骤 1 的非滚动 Canvas 画布区域 (参考官方示例，放在滚动区域外) -->
-		<view v-show="activeStep === 1 && selectedShape !== 'free'" class="preview-container preview-container-edit grid-bg">
+		<view v-show="activeStep === 1 && selectedShape !== 'free' && !show3dPreview" class="preview-container preview-container-edit grid-bg">
 			<rect-canvas ref="rectCanvasRef" v-if="selectedShape === 'rect'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></rect-canvas>
 			<trap-canvas ref="trapCanvasRef" v-if="selectedShape === 'trap'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></trap-canvas>
 		</view>
-		<view v-show="activeStep === 1 && selectedShape === 'free'" class="preview-container preview-container-free-wrapper">
+		<view v-show="activeStep === 1 && selectedShape === 'free' && !show3dPreview" class="preview-container preview-container-free-wrapper">
 			<free-canvas ref="freeCanvasRef" v-if="selectedShape === 'free'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></free-canvas>
 		</view>
+
+		<!-- 3D 实时预览组件 -->
+		<three-d-preview v-if="show3dPreview" :room-data="activeRoomData" @close="show3dPreview = false"></three-d-preview>
 
 		<!-- 中间滚动/内容区域 -->
 		<scroll-view class="content-scroll" :scroll-y="true">
@@ -31,6 +34,11 @@
 
 				<!-- 步骤 1：参数输入与配置区 -->
 				<view v-show="activeStep === 1" class="step-content">
+					<!-- 3D 预览通宽按钮 -->
+					<button class="btn-3d-preview" @tap="open3dPreview">
+						<image class="icon-3d" src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'%3E%3C/path%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'%3E%3C/polyline%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'%3E%3C/line%3E%3C/svg%3E"></image>
+						<text class="btn-3d-text">3D 预览</text>
+					</button>
 					<view class="selector-wrapper">
 						<room-shape-selector v-model="selectedShape"></room-shape-selector>
 					</view>
@@ -66,6 +74,7 @@
 	import RectCanvas from '../../components/drawing-canvas/rect-canvas.uvue'
 	import TrapCanvas from '../../components/drawing-canvas/trap-canvas.uvue'
 	import FreeCanvas from '../../components/drawing-canvas/free-canvas.uvue'
+	import ThreeDPreview from '../../components/three-d-preview/three-d-preview.uvue'
 
 	const steps = ['选择模板', '绘制平面图', '填写表单']
 	const activeStep = ref(0)
@@ -86,6 +95,38 @@
 	const freeCanvasRef = ref<ComponentPublicInstance | null>(null)
 	const exportedDrawingImage = ref('')
 	const currentArea = ref(1200.0)
+
+	const show3dPreview = ref(false)
+	const activeRoomData = ref<Record<string, any>>({})
+
+	const open3dPreview = () => {
+		let activeCanvasRef : any = null
+		if (selectedShape.value === 'rect') {
+			activeCanvasRef = rectCanvasRef.value
+		} else if (selectedShape.value === 'trap') {
+			activeCanvasRef = trapCanvasRef.value
+		} else if (selectedShape.value === 'free') {
+			activeCanvasRef = freeCanvasRef.value
+		}
+
+		if (activeCanvasRef != null) {
+			const data = activeCanvasRef.$callMethod('get3dData') as Record<string, any> | null
+			if (data != null) {
+				activeRoomData.value = data
+				show3dPreview.value = true
+			} else {
+				uni.showToast({
+					title: '无法获取户型数据',
+					icon: 'none'
+				})
+			}
+		} else {
+			uni.showToast({
+				title: '画布未准备好',
+				icon: 'none'
+			})
+		}
+	}
 
 	// 计算选中的模板名称
 	const selectedTemplateName = computed(() : string => {
@@ -262,5 +303,37 @@
 	.preview-container-free-wrapper {
 		margin: 16px 16px 0;
 		width: calc(100% - 32px);
+	}
+
+	.btn-3d-preview {
+		width: 100%;
+		height: 40px;
+		margin: 0 0 16px;
+		background-image: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
+		border: none;
+		border-radius: 12px;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4px 10px 0 rgba(59, 130, 246, 0.2);
+		transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	.btn-3d-preview:active {
+		transform: scale(0.95);
+		box-shadow: 0 2px 5px 0 rgba(59, 130, 246, 0.15);
+	}
+
+	.icon-3d {
+		width: 14px;
+		height: 14px;
+		margin-right: 6px;
+	}
+
+	.btn-3d-text {
+		color: #ffffff;
+		font-weight: bold;
+		font-size: 12px;
 	}
 </style>

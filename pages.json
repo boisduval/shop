@@ -8,6 +8,19 @@
 			}
 		}
 	],
+	"subPackages": [
+		{
+			"root": "subpackages/three-d",
+			"pages": [
+				{
+					"path": "pages/dummy",
+					"style": {
+						"navigationBarTitleText": "3D Assets"
+					}
+				}
+			]
+		}
+	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "uni-app x",
