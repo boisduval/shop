@@ -7,7 +7,7 @@ const WALL_HEIGHT = 2.5; // meters
 const WALL_THICKNESS = 0.15; // meters
 const DOOR_HEIGHT = 2.0; // meters
 const CABINET_HEIGHT = 2.0; // meters
-const SCALE_FACTOR = 40.0; // 40 pixels = 1 meter
+const SCALE_FACTOR = 10.0; // 10 pixels = 1 meter, matching web version exactly
 
 // Active references for cleanup
 let activeCamera = null;
@@ -18,23 +18,33 @@ let appBaseUrl = '';
 
 // Helper to resolve H5 asset paths relative to origin, and Mini Program paths relative to current route depth
 function resolveAssetUrl(path) {
-	console.log('resolveAssetUrl - appBaseUrl:', appBaseUrl, 'input path:', path);
 	if (appBaseUrl) {
-		const res = appBaseUrl + path;
-		console.log('resolveAssetUrl - returned absolute URL:', res);
-		return res;
+		return appBaseUrl + path;
 	}
 	
 	// Mini Program Platform: dynamically calculate route depth to construct relative prefix (real devices fallback)
-	if (typeof getCurrentPages === 'function') {
+	const getPages = (typeof getCurrentPages === 'function') ? getCurrentPages : (typeof wx !== 'undefined' ? wx.getCurrentPages : null);
+	if (getPages) {
 		try {
-			const pages = getCurrentPages();
+			const pages = getPages();
 			if (pages && pages.length > 0) {
 				const route = pages[pages.length - 1].route || '';
 				const slashCount = (route.match(/\//g) || []).length;
 				let prefix = '';
+				
+				// Detect if we are in WeChat Developer Tools simulator
+				let isDevTools = false;
+				const globalObj = typeof uni !== 'undefined' ? uni : (typeof wx !== 'undefined' ? wx : null);
+				if (globalObj && globalObj.getSystemInfoSync) {
+					try {
+						const sysInfo = globalObj.getSystemInfoSync();
+						isDevTools = sysInfo.platform === 'devtools';
+					} catch (e) {}
+				}
+				
 				// WeChat simulator wraps pages in __pageframe__ path segment, requiring an extra parent level (+1) to reach root
-				for (let i = 0; i < slashCount + 1; i++) {
+				const levels = isDevTools ? (slashCount + 1) : slashCount;
+				for (let i = 0; i < levels; i++) {
 					prefix += '../';
 				}
 				// Remove the leading slash of the path to concatenate correctly
@@ -48,34 +58,43 @@ function resolveAssetUrl(path) {
 	
 	// Fallback
 	const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-	return '../../../' + cleanPath;
+	return '../../' + cleanPath;
 }
 
-// WeChat FileSystemManager Base64 texture loader to bypass __pageframe__ bugs
+
+
+
+// WeChat FileSystemManager Base64 texture loader to bypass network and dev server relative path bugs
 function loadTextureWithFallback(loader, path, onSuccess, onError) {
-	if (typeof wx !== 'undefined' && wx.getFileSystemManager) {
-		try {
-			const fs = wx.getFileSystemManager();
-			const cleanPkgPath = path.startsWith('/') ? path.slice(1) : path;
-			const base64 = fs.readFileSync(cleanPkgPath, 'base64');
-			const ext = cleanPkgPath.endsWith('.png') ? 'png' : 'jpeg';
-			const dataUrl = `data:image/${ext};base64,` + base64;
-			loader.load(dataUrl, onSuccess, undefined, onError);
-			return;
-		} catch (e) {
-			console.warn('WeChat native file read failed, falling back to network:', e);
-		}
+	const resolvedUrl = resolveAssetUrl(path);
+	const globalObj = typeof uni !== 'undefined' ? uni : (typeof wx !== 'undefined' ? wx : null);
+	
+	if (globalObj && globalObj.getImageInfo) {
+		globalObj.getImageInfo({
+			src: resolvedUrl, // Pass the resolved relative path to ensure cross-platform compatibility
+			success: (res) => {
+				let finalPath = res.path;
+				// If Android returns a relative path (e.g. static/...), convert it to route-relative path (../../static/...)
+				if (finalPath && !finalPath.includes('://') && !finalPath.startsWith('data:')) {
+					const normalized = finalPath.startsWith('/') ? finalPath : '/' + finalPath;
+					finalPath = resolveAssetUrl(normalized);
+				}
+				loader.load(finalPath, onSuccess, undefined, onError);
+			},
+			fail: (err) => {
+				loader.load(resolvedUrl, onSuccess, undefined, onError);
+			}
+		});
+		return;
 	}
 	
-	const resolvedUrl = resolveAssetUrl(path);
 	loader.load(resolvedUrl, onSuccess, undefined, onError);
 }
 
 
-// Camera Controller State
 let theta = Math.PI / 4; 
 let phi = Math.PI / 4;   
-let radius = 12; // Adjusted to match web version's bounding scale
+let radius = 35; // Adjusted to match web version's camera distance (sqrt(20^2 + 20^2 + 20^2) ≈ 35)
 let lookAtTarget = null;
 
 let lastTouchX = 0;
@@ -152,7 +171,7 @@ function buildFloor(scene, vertices, centerX, centerY, scale, canvasNode) {
 	const textureLoader = new THREE.TextureLoader();
 	loadTextureWithFallback(
 		textureLoader,
-		'/subpackages/three-d/static/granite_tile_04_rough_1k.jpg',
+		'/static/granite_tile_04_rough_1k.jpg',
 		(tex) => {
 			tex.wrapS = THREE.RepeatWrapping;
 			tex.wrapT = THREE.RepeatWrapping;
@@ -333,7 +352,7 @@ function placeDoor(scene, door, centerX, centerY, scale) {
 	const textureLoader = new THREE.TextureLoader();
 	loadTextureWithFallback(
 		textureLoader,
-		'/subpackages/three-d/static/wooden_garage_door_diff_1k.jpg',
+		'/static/wooden_garage_door_diff_1k.jpg',
 		(tex) => {
 			woodMat.map = tex;
 			woodMat.needsUpdate = true;
@@ -459,7 +478,7 @@ export function createThreeScene(canvas, data, baseUrl) {
 	const width = canvas.width || 300;
 	const height = canvas.height || 300;
 	const aspect = width / height;
-	const d = 5; // Adjusted distance to fit layout nicely
+	const d = 12; // Matching web version's camera viewport bounds exactly
 	const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
 	activeCamera = camera;
 
@@ -477,13 +496,25 @@ export function createThreeScene(canvas, data, baseUrl) {
 	});
 	renderer.setSize(width, height);
 	renderer.setPixelRatio(2);
+	
+	// Support older Three.js versions (like r108 used in WeChat Mini Program)
+	renderer.gammaOutput = true;
+	renderer.gammaFactor = 2.2;
+	
+	// Enable gamma correction for rich colors & lighting matching web (high version compatibility)
+	if (THREE.sRGBEncoding !== undefined) {
+		renderer.outputEncoding = THREE.sRGBEncoding;
+	} else if (THREE.SRGBColorSpace !== undefined) {
+		renderer.outputColorSpace = THREE.SRGBColorSpace;
+	}
+	
 	activeRenderer = renderer;
 
-	// 3. Lighting Config (Bright lighting matching web version)
-	const ambientLight = new THREE.AmbientLight(0xffffff, 2.2);
+	// 3. Lighting Config (Aligned to reference design: Ambient 0.85, Directional 0.4)
+	const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
 	scene.add(ambientLight);
 
-	const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+	const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
 	dirLight.position.set(5, 15, 5);
 	scene.add(dirLight);
 

@@ -104,14 +104,18 @@
 						}
 
 						// #ifdef MP-WEIXIN
-						if (typeof uni.loadSubPackage === 'function') {
-							uni.loadSubPackage({
-								name: 'three-d',
+						// @ts-ignore
+						const wxObj = typeof wx !== 'undefined' ? wx : null;
+						if (wxObj != null && typeof wxObj['loadSubPackage'] === 'function') {
+							const loadSubPackageFn = wxObj['loadSubPackage'] as Function;
+							loadSubPackageFn({
+								root: 'subpackages/three-d',
 								success: () => {
+									console.log('Successfully loaded subpackage: subpackages/three-d');
 									initCanvas(canvas);
 								},
-								fail: (err) => {
-									console.error('Failed to load subpackage: three-d', err);
+								fail: (err : any) => {
+									console.error('Failed to load subpackage: subpackages/three-d', err);
 									initCanvas(canvas);
 								}
 							});
