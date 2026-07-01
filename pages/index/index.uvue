@@ -36,15 +36,15 @@
 				<view v-show="activeStep === 1" class="step-content">
 					<!-- 3D 预览与大门操作按钮行 -->
 					<view class="action-btn-row">
-						<button class="btn-action-item btn-3d" @tap="open3dPreview">
-							<image class="icon-3d" src="/static/3d-cube-white.svg"></image>
-							<text class="btn-action-text">3D 预览</text>
-						</button>
 						<button class="btn-action-item btn-add-door" @tap="handleAddDoor">
 							<text class="btn-action-text">新增大门</text>
 						</button>
 						<button class="btn-action-item btn-delete-door" @tap="handleDeleteDoor">
 							<text class="btn-action-text">删除大门</text>
+						</button>
+						<button class="btn-action-item btn-3d" @tap="open3dPreview">
+							<image class="icon-3d" src="/static/3d-cube-white.svg"></image>
+							<text class="btn-action-text">3D 预览</text>
 						</button>
 					</view>
 					<view class="selector-wrapper">
