@@ -42,18 +42,32 @@
 
 	const options : ShapeOption[] = [
 		{
-			title: '矩形房间',
+			title: '矩形',
 			sub: '标准方形',
 			value: 'rect',
 			iconUnselected: '/static/rect-unselected.svg',
 			iconSelected: '/static/rect-selected.svg'
 		},
 		{
-			title: '梯形房间',
+			title: '梯形',
 			sub: '规则异形',
 			value: 'trap',
 			iconUnselected: '/static/trap-unselected.svg',
 			iconSelected: '/static/trap-selected.svg'
+		},
+		{
+			title: '直角梯形',
+			sub: '一侧直角',
+			value: 'rightTrap',
+			iconUnselected: '/static/rightTrap-unselected.svg',
+			iconSelected: '/static/rightTrap-selected.svg'
+		},
+		{
+			title: '倒梯形',
+			sub: '上宽下窄',
+			value: 'invTrap',
+			iconUnselected: '/static/invTrap-unselected.svg',
+			iconSelected: '/static/invTrap-selected.svg'
 		},
 		{
 			title: '自由绘制',

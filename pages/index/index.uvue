@@ -11,7 +11,7 @@
 			class="preview-container preview-container-edit grid-bg">
 			<rect-canvas ref="rectCanvasRef" v-if="selectedShape === 'rect'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></rect-canvas>
-			<trap-canvas ref="trapCanvasRef" v-if="selectedShape === 'trap'" :cabinet-style="selectedCabinetStyle"
+			<trap-canvas ref="trapCanvasRef" v-if="selectedShape === 'trap' || selectedShape === 'rightTrap' || selectedShape === 'invTrap'" :shape-type="selectedShape" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></trap-canvas>
 		</view>
 		<view v-show="activeStep === 1 && selectedShape === 'free' && !show3dPreview"
@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="uts">
-	import { ref, computed, reactive, getCurrentInstance } from 'vue'
+	import { ref, computed, reactive, getCurrentInstance, watch } from 'vue'
 	import { Record } from '../../utils/types'
 	import { templatesList } from '../../utils/templatesPreset'
 	import { generateAndSaveReport } from '../../utils/exportUtils'
@@ -108,6 +108,22 @@
 	const exportedDrawingImage = ref('')
 	const currentArea = ref(1200.0)
 
+	watch(selectedShape, (newShape) => {
+		if (newShape === 'invTrap') {
+			drawingParams.value['trapTop'] = 50
+			drawingParams.value['trapBottom'] = 30
+			drawingParams.value['trapOffset'] = -10
+		} else if (newShape === 'rightTrap') {
+			drawingParams.value['trapTop'] = 30
+			drawingParams.value['trapBottom'] = 50
+			drawingParams.value['trapOffset'] = 0
+		} else if (newShape === 'trap') {
+			drawingParams.value['trapTop'] = 30
+			drawingParams.value['trapBottom'] = 50
+			drawingParams.value['trapOffset'] = 10
+		}
+	})
+
 	const show3dPreview = ref(false)
 	const activeRoomData = ref<Record<string, any>>({})
 
@@ -115,7 +131,7 @@
 		let activeCanvasRef : any = null
 		if (selectedShape.value === 'rect') {
 			activeCanvasRef = rectCanvasRef.value
-		} else if (selectedShape.value === 'trap') {
+		} else if (selectedShape.value === 'trap' || selectedShape.value === 'rightTrap' || selectedShape.value === 'invTrap') {
 			activeCanvasRef = trapCanvasRef.value
 		} else if (selectedShape.value === 'free') {
 			activeCanvasRef = freeCanvasRef.value
@@ -144,7 +160,7 @@
 		let activeCanvasRef : any = null
 		if (selectedShape.value === 'rect') {
 			activeCanvasRef = rectCanvasRef.value
-		} else if (selectedShape.value === 'trap') {
+		} else if (selectedShape.value === 'trap' || selectedShape.value === 'rightTrap' || selectedShape.value === 'invTrap') {
 			activeCanvasRef = trapCanvasRef.value
 		} else if (selectedShape.value === 'free') {
 			activeCanvasRef = freeCanvasRef.value
@@ -159,7 +175,7 @@
 		let activeCanvasRef : any = null
 		if (selectedShape.value === 'rect') {
 			activeCanvasRef = rectCanvasRef.value
-		} else if (selectedShape.value === 'trap') {
+		} else if (selectedShape.value === 'trap' || selectedShape.value === 'rightTrap' || selectedShape.value === 'invTrap') {
 			activeCanvasRef = trapCanvasRef.value
 		} else if (selectedShape.value === 'free') {
 			activeCanvasRef = freeCanvasRef.value
@@ -219,7 +235,7 @@
 			let activeCanvasRef : any = null
 			if (selectedShape.value === 'rect') {
 				activeCanvasRef = rectCanvasRef.value
-			} else if (selectedShape.value === 'trap') {
+			} else if (selectedShape.value === 'trap' || selectedShape.value === 'rightTrap' || selectedShape.value === 'invTrap') {
 				activeCanvasRef = trapCanvasRef.value
 			} else if (selectedShape.value === 'free') {
 				activeCanvasRef = freeCanvasRef.value

@@ -20,6 +20,11 @@
 		activeStep: {
 			type: Number,
 			required: true
+		},
+		shapeType: {
+			type: String,
+			required: false,
+			default: 'trap'
 		}
 	})
 
@@ -33,11 +38,11 @@
 	const currentHeight = ref(300.0)
 
 	const canvasScale = computed(() : number => {
-		return getCanvasScale('trap', props.params, currentWidth.value, currentHeight.value, padding)
+		return getCanvasScale(props.shapeType, props.params, currentWidth.value, currentHeight.value, padding)
 	})
 
 	const roomVertices = computed(() : Point[] => {
-		return getRoomVertices('trap', props.params, currentWidth.value, currentHeight.value, canvasScale.value)
+		return getRoomVertices(props.shapeType, props.params, currentWidth.value, currentHeight.value, canvasScale.value)
 	})
 
 	const calculatedAreaValue = computed(() : number => {
@@ -66,7 +71,7 @@
 		const tt = props.params['trapTop'] as number
 		const tb = props.params['trapBottom'] as number
 		const th = props.params['trapH'] as number
-		const to = props.params['trapOffset'] as number
+		const to = props.shapeType === 'rightTrap' ? 0.0 : (props.params['trapOffset'] as number)
 
 		const minX = Math.min(0.0, to)
 		const maxX = Math.max(tb, to + tt)

@@ -312,11 +312,11 @@ export function getCanvasScale(
 		const scaleX = (canvasWidth - padding * 2) / rw
 		const scaleY = (canvasHeight - padding * 2) / rh
 		return Math.min(scaleX, scaleY)
-	} else if (shapeType === 'trap') {
+	} else if (shapeType === 'trap' || shapeType === 'rightTrap' || shapeType === 'invTrap') {
 		const tt = params['trapTop'] as number
 		const tb = params['trapBottom'] as number
 		const th = params['trapH'] as number
-		const to = params['trapOffset'] as number
+		const to = shapeType === 'rightTrap' ? 0.0 : (params['trapOffset'] as number)
 		if (tt <= 0 || tb <= 0 || th <= 0) return 40.0
 		const minX = Math.min(0.0, to)
 		const maxX = Math.max(tb, to + tt)
@@ -352,11 +352,11 @@ export function getRoomVertices(
 		vertices.push({ x: x0 + sw, y: y0 } as Point)
 		vertices.push({ x: x0 + sw, y: y0 + sh } as Point)
 		vertices.push({ x: x0, y: y0 + sh } as Point)
-	} else if (shapeType === 'trap') {
+	} else if (shapeType === 'trap' || shapeType === 'rightTrap' || shapeType === 'invTrap') {
 		const tt = params['trapTop'] as number
 		const tb = params['trapBottom'] as number
 		const th = params['trapH'] as number
-		const to = params['trapOffset'] as number
+		const to = shapeType === 'rightTrap' ? 0.0 : (params['trapOffset'] as number)
 
 		const minX = Math.min(0.0, to)
 		const maxX = Math.max(tb, to + tt)

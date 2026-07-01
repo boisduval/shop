@@ -19,9 +19,9 @@
 		</view>
 
 		<!-- 梯形房间参数面板 -->
-		<view v-if="shapeType === 'trap'" class="param-group">
+		<view v-if="shapeType === 'trap' || shapeType === 'rightTrap' || shapeType === 'invTrap'" class="param-group">
 			<!-- 位置调节滑块 (Slider) (独立于输入卡片) -->
-			<view class="slider-container mb-4">
+			<view v-if="shapeType !== 'rightTrap'" class="slider-container mb-4">
 				<text class="slider-label">位置调节</text>
 				<view class="slider-wrapper">
 					<slider :value="modelValue['trapOffset']" :min="-100" :max="100" active-color="#3B66F5"

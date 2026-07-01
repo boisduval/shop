@@ -104,7 +104,7 @@ export const templatesPreset = {
 	},
 	disabled: {
 		id: 5,
-		name: '残疾人',
+		name: '受理特殊群体',
 		value: 'disabled',
 		content: [
 			'{%location_map}',
