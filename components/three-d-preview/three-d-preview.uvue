@@ -17,7 +17,7 @@
 			<!-- 内嵌 3D 画布区域 -->
 			<view class="canvas-container">
 				<canvas type="webgl" id="three-canvas" class="three-canvas" @touchstart="onTouchStartEvent"
-					@touchmove="onTouchMoveEvent" @touchend="onTouchEndEvent"></canvas>
+					@touchmove="onTouchMoveEvent" @touchend="onTouchEndEvent" :disable-scroll="true"></canvas>
 
 				<!-- 加载动画与重试遮罩层 (使用 cover-view 避免被 WebGL canvas 遮挡) -->
 				<cover-view v-if="loadingStatus === 'loading'" class="loading-overlay">

@@ -1,7 +1,7 @@
 <template>
 	<view class="canvas-container">
 		<canvas :id="canvasId" :canvas-id="canvasId" class="canvas" @touchstart="onTouchStart" @touchmove="onTouchMove"
-			@touchend="onTouchEnd"></canvas>
+			@touchend="onTouchEnd" :disable-scroll="true"></canvas>
 	</view>
 </template>
 
