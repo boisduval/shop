@@ -183,6 +183,20 @@ export function drawCabinet(
 	ctx.font = `${Math.round(10 * scale)}px sans-serif`
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
+	ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
+	ctx.shadowBlur = 2
+	ctx.shadowOffsetX = 1
+	ctx.shadowOffsetY = 1
+	if (type === 'l_shape' || type === 'l_shape_mirror') {
+		ctx.fillText('烟柜', 0, -7.5 * scale)
+	} else {
+		ctx.fillText('烟柜', 0, 0)
+	}
+	// 重置阴影，避免影响后续绘制的控制按钮/手柄
+	ctx.shadowColor = 'transparent'
+	ctx.shadowBlur = 0
+	ctx.shadowOffsetX = 0
+	ctx.shadowOffsetY = 0
 
 	if (isActive) {
 		// 1. 连线到控制按钮 (实线，与物体同色)
