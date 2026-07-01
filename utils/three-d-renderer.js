@@ -430,21 +430,40 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale, onLoadComplete) {
     const loader = new THREE.GLTFLoader();
 
     let modelPath = "https://gitee.com/wafaa/my-assets/raw/main/shelf.glb";
-    if (isLShape) {
+    if (cabinet.cabinetStyle === "l_shape") {
       modelPath =
-        "https://cdn.jsdelivr.net/gh/boisduval/my-assets@v1.1.0/danell_ridge_w556-48_ashley.glb";
+        "https://gitee.com/wafaa/my-assets/raw/main/shelfLM.glb";
+    } else if (cabinet.cabinetStyle === "l_shape_mirror") {
+      modelPath =
+        "https://gitee.com/wafaa/my-assets/raw/main/shelfL.glb";
     }
 
     loader.load(
       modelPath,
       (gltf) => {
         const model = gltf.scene.clone();
+        if (isLShape) {
+          model.rotation.y = Math.PI / 2;
+        }
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
         box.getSize(size);
 
-        if (size.x > 0.001) {
-          const scaleFactor = finalW / size.x;
+        let scaleFactor = 1.0;
+        let validSize = false;
+        if (isLShape) {
+          if (size.z > 0.001) {
+            scaleFactor = finalW / size.z;
+            validSize = true;
+          }
+        } else {
+          if (size.x > 0.001) {
+            scaleFactor = finalW / size.x;
+            validSize = true;
+          }
+        }
+
+        if (validSize) {
           model.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
           const scaledBox = new THREE.Box3().setFromObject(model);
@@ -459,7 +478,7 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale, onLoadComplete) {
         } else {
           console.warn(
             "placeCabinet: Model size is too small or invalid:",
-            size.x,
+            isLShape ? size.z : size.x,
           );
         }
 
