@@ -7,19 +7,22 @@
 		<app-header :active-step="activeStep" :selected-template="selectedTemplateName" :steps="steps"></app-header>
 
 		<!-- 步骤 1 的非滚动 Canvas 画布区域 (参考官方示例，放在滚动区域外) -->
-		<view v-show="activeStep === 1 && selectedShape !== 'free' && !show3dPreview" class="preview-container preview-container-edit grid-bg">
+		<view v-show="activeStep === 1 && selectedShape !== 'free' && !show3dPreview"
+			class="preview-container preview-container-edit grid-bg">
 			<rect-canvas ref="rectCanvasRef" v-if="selectedShape === 'rect'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></rect-canvas>
 			<trap-canvas ref="trapCanvasRef" v-if="selectedShape === 'trap'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></trap-canvas>
 		</view>
-		<view v-show="activeStep === 1 && selectedShape === 'free' && !show3dPreview" class="preview-container preview-container-free-wrapper">
+		<view v-show="activeStep === 1 && selectedShape === 'free' && !show3dPreview"
+			class="preview-container preview-container-free-wrapper">
 			<free-canvas ref="freeCanvasRef" v-if="selectedShape === 'free'" :cabinet-style="selectedCabinetStyle"
 				:params="drawingParams" :active-step="activeStep" @update:area="onAreaUpdate"></free-canvas>
 		</view>
 
 		<!-- 3D 实时预览组件 -->
-		<three-d-preview v-if="show3dPreview" :room-data="activeRoomData" @close="show3dPreview = false"></three-d-preview>
+		<three-d-preview v-if="show3dPreview" :room-data="activeRoomData"
+			@close="show3dPreview = false"></three-d-preview>
 
 		<!-- 中间滚动/内容区域 -->
 		<scroll-view class="content-scroll" :scroll-y="true">
@@ -70,7 +73,8 @@
 			@submit="exportReport"></app-footer>
 
 		<!-- 用于生成导出报告的隐藏 canvas -->
-		<canvas id="exportCanvas" canvas-id="exportCanvas" style="position: absolute; left: -9999px; width: 800px; height: 1600px; pointer-events: none;"></canvas>
+		<canvas id="exportCanvas" canvas-id="exportCanvas"
+			style="position: absolute; left: -9999px; width: 800px; height: 1600px; pointer-events: none;"></canvas>
 	</view>
 </template>
 
@@ -394,6 +398,10 @@
 		box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.05);
 	}
 
+	.btn-action-item::after {
+		border: none;
+	}
+
 	.btn-action-item:active {
 		transform: scale(0.95);
 	}
@@ -404,13 +412,25 @@
 	}
 
 	.btn-add-door {
-		background-image: linear-gradient(90deg, #10b981 0%, #059669 100%);
-		box-shadow: 0 4px 10px 0 rgba(16, 185, 129, 0.2);
+		background-color: rgba(16, 185, 129, 0.15);
+		border: 1px solid rgba(16, 185, 129, 0.3);
+		box-shadow: none;
+		backdrop-filter: blur(10px);
+	}
+
+	.btn-add-door .btn-action-text {
+		color: #059669;
 	}
 
 	.btn-delete-door {
-		background-image: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
-		box-shadow: 0 4px 10px 0 rgba(239, 68, 68, 0.2);
+		background-color: rgba(239, 68, 68, 0.15);
+		border: 1px solid rgba(239, 68, 68, 0.3);
+		box-shadow: none;
+		backdrop-filter: blur(10px);
+	}
+
+	.btn-delete-door .btn-action-text {
+		color: #dc2626;
 	}
 
 	.btn-action-text {
