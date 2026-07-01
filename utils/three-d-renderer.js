@@ -175,7 +175,7 @@ function createWallSegment(
 }
 
 // Wall extrusion & opening algorithm
-function buildWalls(scene, wallMat, vertices, door, centerX, centerY, scale) {
+function buildWalls(scene, wallMat, vertices, doors, centerX, centerY, scale) {
   const n = vertices.length;
   if (n < 3) return;
 
@@ -193,33 +193,42 @@ function buildWalls(scene, wallMat, vertices, door, centerX, centerY, scale) {
     const length = Math.sqrt(dx * dx + dz * dz);
     if (length === 0) continue;
 
-    let hasDoor = false;
-    let doorProjT = 0;
+    const matchedDoors = [];
+    if (doors && Array.isArray(doors)) {
+      for (let d = 0; d < doors.length; d++) {
+        const doorObj = doors[d];
+        if (doorObj && doorObj.x !== undefined && doorObj.y !== undefined) {
+          const dx_door = (doorObj.x - centerX) / scale;
+          const dz_door = (doorObj.y - centerY) / scale;
 
-    if (door && door.x !== undefined && door.y !== undefined) {
-      const dx_door = (door.x - centerX) / scale;
-      const dz_door = (door.y - centerY) / scale;
+          const wX = dx_door - x1;
+          const wZ = dz_door - z1;
+          const uX = dx / length;
+          const uZ = dz / length;
 
-      const wX = dx_door - x1;
-      const wZ = dz_door - z1;
-      const uX = dx / length;
-      const uZ = dz / length;
+          const projT = wX * uX + wZ * uZ;
+          const projPointX = x1 + projT * uX;
+          const projPointZ = z1 + projT * uZ;
 
-      const projT = wX * uX + wZ * uZ;
-      const projPointX = x1 + projT * uX;
-      const projPointZ = z1 + projT * uZ;
+          const distToWall = Math.sqrt(
+            (dx_door - projPointX) ** 2 + (dz_door - projPointZ) ** 2,
+          );
 
-      const distToWall = Math.sqrt(
-        (dx_door - projPointX) ** 2 + (dz_door - projPointZ) ** 2,
-      );
-
-      if (distToWall < 0.6 && projT >= -0.2 && projT <= length + 0.2) {
-        hasDoor = true;
-        doorProjT = Math.max(0, Math.min(length, projT));
+          if (distToWall < 0.6 && projT >= -0.2 && projT <= length + 0.2) {
+            const tClamped = Math.max(0, Math.min(length, projT));
+            const doorWidthM = (doorObj.width || 40.0) / scale;
+            matchedDoors.push({
+              door: doorObj,
+              projT: tClamped,
+              leftCut: Math.max(0, tClamped - doorWidthM / 2),
+              rightCut: Math.min(length, tClamped + doorWidthM / 2)
+            });
+          }
+        }
       }
     }
 
-    if (!hasDoor) {
+    if (matchedDoors.length === 0) {
       createWallSegment(
         scene,
         wallMat,
@@ -232,55 +241,38 @@ function buildWalls(scene, wallMat, vertices, door, centerX, centerY, scale) {
         0,
       );
     } else {
-      const doorWidthM = (door.width || 40.0) / scale;
+      matchedDoors.sort((a, b) => a.projT - b.projT);
+
+      let lastT = 0;
       const uX = dx / length;
       const uZ = dz / length;
 
-      const leftCut = Math.max(0, doorProjT - doorWidthM / 2);
-      const rightCut = Math.min(length, doorProjT + doorWidthM / 2);
+      for (let j = 0; j < matchedDoors.length; j++) {
+        const md = matchedDoors[j];
+        if (md.leftCut > lastT + 0.05) {
+          const xw1 = x1 + lastT * uX;
+          const zw1 = z1 + lastT * uZ;
+          const xw2 = x1 + md.leftCut * uX;
+          const zw2 = z1 + md.leftCut * uZ;
+          createWallSegment(
+            scene,
+            wallMat,
+            xw1,
+            zw1,
+            xw2,
+            zw2,
+            WALL_HEIGHT,
+            WALL_THICKNESS,
+            0,
+          );
+        }
 
-      // 1. Left Wall
-      if (leftCut > 0.05) {
-        const xl2 = x1 + leftCut * uX;
-        const zl2 = z1 + leftCut * uZ;
-        createWallSegment(
-          scene,
-          wallMat,
-          x1,
-          z1,
-          xl2,
-          zl2,
-          WALL_HEIGHT,
-          WALL_THICKNESS,
-          0,
-        );
-      }
-
-      // 2. Right Wall
-      if (length - rightCut > 0.05) {
-        const xr1 = x1 + rightCut * uX;
-        const zr1 = z1 + rightCut * uZ;
-        createWallSegment(
-          scene,
-          wallMat,
-          xr1,
-          zr1,
-          x2,
-          z2,
-          WALL_HEIGHT,
-          WALL_THICKNESS,
-          0,
-        );
-      }
-
-      // 3. Lintel Wall (Only draw if door height is lower than wall height)
-      if (rightCut > leftCut) {
         const lintelHeight = WALL_HEIGHT - DOOR_HEIGHT;
-        if (lintelHeight > 0.05) {
-          const xl2 = x1 + leftCut * uX;
-          const zl2 = z1 + leftCut * uZ;
-          const xr1 = x1 + rightCut * uX;
-          const zr1 = z1 + rightCut * uZ;
+        if (lintelHeight > 0.05 && md.rightCut > md.leftCut) {
+          const xl2 = x1 + md.leftCut * uX;
+          const zl2 = z1 + md.leftCut * uZ;
+          const xr1 = x1 + md.rightCut * uX;
+          const zr1 = z1 + md.rightCut * uZ;
           createWallSegment(
             scene,
             wallMat,
@@ -293,10 +285,26 @@ function buildWalls(scene, wallMat, vertices, door, centerX, centerY, scale) {
             DOOR_HEIGHT,
           );
         }
+
+        placeDoor(scene, md.door, centerX, centerY, scale);
+        lastT = md.rightCut;
       }
 
-      // Build Door representation inside opening
-      placeDoor(scene, door, centerX, centerY, scale);
+      if (length > lastT + 0.05) {
+        const xw1 = x1 + lastT * uX;
+        const zw1 = z1 + lastT * uZ;
+        createWallSegment(
+          scene,
+          wallMat,
+          xw1,
+          zw1,
+          x2,
+          z2,
+          WALL_HEIGHT,
+          WALL_THICKNESS,
+          0,
+        );
+      }
     }
   }
 
@@ -606,15 +614,19 @@ export function createThreeScene(canvas, data, baseUrl, onLoadStateChange) {
     buildFloor(scene, vertices, centerX, centerY, SCALE_FACTOR, canvas);
 
     // Build walls & door
-    const doorData =
-      data.doorX !== undefined
-        ? {
-            x: data.doorX,
-            y: data.doorY,
-            angle: data.doorAngle,
-            width: data.doorWidth,
-          }
-        : null;
+    let doorsData = [];
+    if (data.doors && Array.isArray(data.doors)) {
+      doorsData = data.doors;
+    } else if (data.doorX !== undefined) {
+      doorsData = [
+        {
+          x: data.doorX,
+          y: data.doorY,
+          angle: data.doorAngle,
+          width: data.doorWidth,
+        },
+      ];
+    }
     const wallMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       roughness: 0.8,
@@ -624,7 +636,7 @@ export function createThreeScene(canvas, data, baseUrl, onLoadStateChange) {
       scene,
       wallMat,
       vertices,
-      doorData,
+      doorsData,
       centerX,
       centerY,
       SCALE_FACTOR,

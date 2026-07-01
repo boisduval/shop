@@ -1,7 +1,9 @@
 <template>
-	<view class="canvas-container">
-		<canvas :id="canvasId" :canvas-id="canvasId" class="canvas" @touchstart="onTouchStart" @touchmove="onTouchMove"
-			@touchend="onTouchEnd" :disable-scroll="true"></canvas>
+	<view class="canvas-wrapper">
+		<view class="canvas-container">
+			<canvas :id="canvasId" :canvas-id="canvasId" class="canvas" @touchstart="onTouchStart" @touchmove="onTouchMove"
+				@touchend="onTouchEnd" :disable-scroll="true"></canvas>
+		</view>
 	</view>
 </template>
 
@@ -9,6 +11,14 @@
 	import { ref, watch, PropType, getCurrentInstance, onMounted } from 'vue'
 	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, drawLegends, COLOR_CABINET } from '../../utils/canvasUtils'
 	import { getDoorRotationHandlePos, calculateDoorScaleAndPos, calculateCabinetScaleAndPos } from '../../utils/controlUtils'
+
+	export interface Door {
+		x: number
+		y: number
+		angle: number
+		width: number
+		thickness: number
+	}
 
 	const props = defineProps({
 		canvasId: {
@@ -67,17 +77,14 @@
 	const canvasWidth = ref(300.0)
 	const canvasHeight = ref(300.0)
 
-	// 大门交互状态
-	const doorX = ref(0.0)
-	const doorY = ref(0.0)
-	const doorAngle = ref(0.0)
-	const doorWidth = ref(40.0)
-	const doorThickness = ref(6.0)
+	// 大门交互与数组状态
+	const doors = ref<Door[]>([])
+	const activeDoorIndex = ref(-1)
 	const isDragging = ref(false)
 	const isRotating = ref(false)
 	const isScalingDoor = ref(false)
-	const isDoorInitialized = ref(false)
 	const isDoorManuallyPlaced = ref(false)
+	const isDoorDeletedByUser = ref(false)
 
 	// 烟柜交互状态
 	const cabinetX = ref(150.0)
@@ -101,7 +108,6 @@
 	const draggedCornerIndex = ref(0)
 	const draggedDoorEnd = ref(0)
 
-
 	const instance = getCurrentInstance()!.proxy
 
 	const initContext = () => {
@@ -116,8 +122,8 @@
 				canvasWidth.value = canvas.width
 				canvasHeight.value = canvas.height
 				canvasCtx!.scale(dpr, dpr)
-				if (props.vertices.length >= 3 && !isDoorInitialized.value) {
-					initDoor()
+				if (props.vertices.length >= 3 && doors.value.length === 0 && !isDoorDeletedByUser.value) {
+					initFirstDoor()
 				}
 				if (!isCabinetInitialized.value) {
 					initCabinet()
@@ -146,7 +152,10 @@
 		isCabinetInitialized.value = true
 	}
 
-	const initDoor = () => {
+	const createDefaultDoor = () : Door => {
+		let dx = 0.0
+		let dy = 0.0
+		let dAngle = 0.0
 		if (props.vertices.length >= 3) {
 			let minX = props.vertices[0].x
 			let maxY = props.vertices[0].y
@@ -155,25 +164,34 @@
 				if (pt.x < minX) minX = pt.x
 				if (pt.y > maxY) maxY = pt.y
 			}
-			doorX.value = minX + 50.0
-			doorY.value = maxY
-			doorWidth.value = 40.0
-			doorAngle.value = 0.0
+			const offset = doors.value.length * 20.0
+			dx = minX + 50.0 + offset
+			dy = maxY
 
 			const segments = generateWallSegments(props.vertices)
-			const snapRes = snapDoorToWall({ x: doorX.value, y: doorY.value } as Point, segments, 999999.0)
+			const snapRes = snapDoorToWall({ x: dx, y: dy } as Point, segments, 999999.0)
 			if (snapRes['isSnapped'] as boolean) {
-				doorX.value = snapRes['x'] as number
-				doorY.value = snapRes['y'] as number
-				doorAngle.value = snapRes['angle'] as number
+				dx = snapRes['x'] as number
+				dy = snapRes['y'] as number
+				dAngle = snapRes['angle'] as number
 			}
-		} else {
-			doorX.value = 0.0
-			doorY.value = 0.0
-			doorWidth.value = 40.0
-			doorAngle.value = 0.0
 		}
-		isDoorInitialized.value = true
+		return {
+			x: dx,
+			y: dy,
+			angle: dAngle,
+			width: 40.0,
+			thickness: 6.0
+		} as Door
+	}
+
+	const initFirstDoor = () => {
+		const defaultDoor = createDefaultDoor()
+		if (doors.value.length === 0) {
+			doors.value.push(defaultDoor)
+		} else {
+			doors.value[0] = defaultDoor
+		}
 	}
 
 	onMounted(() => {
@@ -198,13 +216,15 @@
 
 	watch(() => props.isClosed, (newVal) => {
 		if (!newVal) {
-			isDoorInitialized.value = false
+			doors.value = []
 			isCabinetInitialized.value = false
 			activeObjectType.value = 'none'
+			activeDoorIndex.value = -1
 		} else {
 			if (props.vertices.length >= 3) {
+				isDoorDeletedByUser.value = false
 				initCabinet()
-				initDoor()
+				initFirstDoor()
 			}
 		}
 		draw()
@@ -212,8 +232,8 @@
 
 	watch(() => props.vertices, (newVertices) => {
 		if (newVertices.length >= 3) {
-			if (!isDoorInitialized.value || !isDoorManuallyPlaced.value) {
-				initDoor()
+			if ((doors.value.length === 0 && !isDoorDeletedByUser.value) || !isDoorManuallyPlaced.value) {
+				initFirstDoor()
 			}
 			draw()
 		}
@@ -242,17 +262,18 @@
 				)
 			}
 
-			if (isDoorInitialized.value) {
+			for (let i = 0; i < doors.value.length; i++) {
+				const door = doors.value[i]
 				drawDoor(
 					ctx,
-					doorX.value * props.zoom + props.panX,
-					doorY.value * props.zoom + props.panY,
-					doorAngle.value,
-					doorWidth.value * props.zoom,
-					doorThickness.value,
-					isDragging.value,
-					isRotating.value,
-					activeObjectType.value === 'door'
+					door.x * props.zoom + props.panX,
+					door.y * props.zoom + props.panY,
+					door.angle,
+					door.width * props.zoom,
+					door.thickness,
+					isDragging.value && activeDoorIndex.value === i,
+					isRotating.value && activeDoorIndex.value === i,
+					activeObjectType.value === 'door' && activeDoorIndex.value === i
 				)
 			}
 
@@ -267,7 +288,7 @@
 	const onTouchStart = (e : TouchEvent) => {
 		emit('canvas-touchstart', e)
 		if (!props.isClosed) return
-		if (e.touches.length === 0 || !isDoorInitialized.value) return
+		if (e.touches.length === 0) return
 		const touch = e.touches[0]
 		const tx = touch.x
 		const ty = touch.y
@@ -276,9 +297,10 @@
 		const vx = (tx - props.panX) / props.zoom
 		const vy = (ty - props.panY) / props.zoom
 
-		// 1. 如果大门已选中，检测其特有的手持控制（旋转、拉伸）
-		if (activeObjectType.value === 'door') {
-			const rp = getDoorRotationHandlePos(doorX.value, doorY.value, doorAngle.value, doorWidth.value)
+		// 1. 如果选中了大门，检测其特有的手持控制（旋转、拉伸）
+		if (activeObjectType.value === 'door' && activeDoorIndex.value >= 0 && activeDoorIndex.value < doors.value.length) {
+			const door = doors.value[activeDoorIndex.value]
+			const rp = getDoorRotationHandlePos(door.x, door.y, door.angle, door.width)
 			const rx = rp.x
 			const ry = rp.y
 			const distRotate = Math.sqrt((vx - rx) * (vx - rx) + (vy - ry) * (vy - ry))
@@ -288,14 +310,14 @@
 				return
 			}
 
-			const dAngle = doorAngle.value
-			const dw = doorWidth.value
+			const dAngle = door.angle
+			const dw = door.width
 			const dlx1 = -dw / 2.0
 			const dlx2 = dw / 2.0
-			const dgx1 = doorX.value + dlx1 * Math.cos(dAngle)
-			const dgy1 = doorY.value + dlx1 * Math.sin(dAngle)
-			const dgx2 = doorX.value + dlx2 * Math.cos(dAngle)
-			const dgy2 = doorY.value + dlx2 * Math.sin(dAngle)
+			const dgx1 = door.x + dlx1 * Math.cos(dAngle)
+			const dgy1 = door.y + dlx1 * Math.sin(dAngle)
+			const dgx2 = door.x + dlx2 * Math.cos(dAngle)
+			const dgy2 = door.y + dlx2 * Math.sin(dAngle)
 
 			const distDoorL = Math.sqrt((vx - dgx1) * (vx - dgx1) + (vy - dgy1) * (vy - dgy1))
 			const distDoorR = Math.sqrt((vx - dgx2) * (vx - dgx2) + (vy - dgy2) * (vy - dgy2))
@@ -357,12 +379,16 @@
 		}
 
 		// 3. 都没有选中手柄，检测点击物体本体激活选中
-		const distDoorBody = Math.sqrt((vx - doorX.value) * (vx - doorX.value) + (vy - doorY.value) * (vy - doorY.value))
-		if (distDoorBody < 25.0 / props.zoom) {
-			activeObjectType.value = 'door'
-			isDragging.value = true
-			draw()
-			return
+		for (let i = 0; i < doors.value.length; i++) {
+			const door = doors.value[i]
+			const distDoorBody = Math.sqrt((vx - door.x) * (vx - door.x) + (vy - door.y) * (vy - door.y))
+			if (distDoorBody < 25.0 / props.zoom) {
+				activeObjectType.value = 'door'
+				activeDoorIndex.value = i
+				isDragging.value = true
+				draw()
+				return
+			}
 		}
 
 		if (isCabinetInitialized.value) {
@@ -380,6 +406,7 @@
 		// 点击空白处，清除选中状态
 		if (activeObjectType.value !== 'none') {
 			activeObjectType.value = 'none'
+			activeDoorIndex.value = -1
 			draw()
 		}
 	}
@@ -387,7 +414,7 @@
 	const onTouchMove = (e : TouchEvent) => {
 		emit('canvas-touchmove', e)
 		if (!props.isClosed) return
-		if (e.touches.length === 0 || !isDoorInitialized.value) return
+		if (e.touches.length === 0) return
 		const touch = e.touches[0]
 		const tx = touch.x
 		const ty = touch.y
@@ -396,54 +423,65 @@
 		const vx = (tx - props.panX) / props.zoom
 		const vy = (ty - props.panY) / props.zoom
 
-		if (isDragging.value) {
+		if (isDragging.value && activeDoorIndex.value >= 0 && activeDoorIndex.value < doors.value.length) {
 			isDoorManuallyPlaced.value = true
+			const door = doors.value[activeDoorIndex.value]
+			let nextX = vx
+			let nextY = vy
+			let nextAngle = door.angle
+
 			if (props.vertices.length >= 3) {
 				const segments = generateWallSegments(props.vertices)
 				const snapRes = snapDoorToWall({ x: vx, y: vy } as Point, segments, 60.0 / props.zoom)
 				if (snapRes['isSnapped'] as boolean) {
-					doorX.value = snapRes['x'] as number
-					doorY.value = snapRes['y'] as number
-					
+					nextX = snapRes['x'] as number
+					nextY = snapRes['y'] as number
+
 					const wallAngle = snapRes['angle'] as number
-					const currentAngle = doorAngle.value
+					const currentAngle = door.angle
 					const diff1 = ((currentAngle - wallAngle + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
 					const diff2 = ((currentAngle - (wallAngle + Math.PI) + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
 					if (Math.abs(diff1) < Math.abs(diff2)) {
-						doorAngle.value = wallAngle
+						nextAngle = wallAngle
 					} else {
-						doorAngle.value = wallAngle + Math.PI
+						nextAngle = wallAngle + Math.PI
 					}
 				} else {
 					const forceSnapRes = snapDoorToWall({ x: vx, y: vy } as Point, segments, 999999.0)
-					doorX.value = forceSnapRes['x'] as number
-					doorY.value = forceSnapRes['y'] as number
-					
+					nextX = forceSnapRes['x'] as number
+					nextY = forceSnapRes['y'] as number
+
 					const wallAngle = forceSnapRes['angle'] as number
-					const currentAngle = doorAngle.value
+					const currentAngle = door.angle
 					const diff1 = ((currentAngle - wallAngle + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
 					const diff2 = ((currentAngle - (wallAngle + Math.PI) + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
 					if (Math.abs(diff1) < Math.abs(diff2)) {
-						doorAngle.value = wallAngle
+						nextAngle = wallAngle
 					} else {
-						doorAngle.value = wallAngle + Math.PI
+						nextAngle = wallAngle + Math.PI
 					}
 				}
 			}
+
+			door.x = nextX
+			door.y = nextY
+			door.angle = nextAngle
 			draw()
-		} else if (isRotating.value) {
+		} else if (isRotating.value && activeDoorIndex.value >= 0 && activeDoorIndex.value < doors.value.length) {
 			isDoorManuallyPlaced.value = true
-			const dx = vx - doorX.value
-			const dy = vy - doorY.value
+			const door = doors.value[activeDoorIndex.value]
+			const dx = vx - door.x
+			const dy = vy - door.y
 			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
-			doorAngle.value = rawAngle
+			door.angle = rawAngle
 			draw()
-		} else if (isScalingDoor.value) {
+		} else if (isScalingDoor.value && activeDoorIndex.value >= 0 && activeDoorIndex.value < doors.value.length) {
 			isDoorManuallyPlaced.value = true
-			const doorRes = calculateDoorScaleAndPos(vx, vy, anchorX.value, anchorY.value, doorAngle.value, draggedDoorEnd.value)
-			doorX.value = doorRes['x'] as number
-			doorY.value = doorRes['y'] as number
-			doorWidth.value = doorRes['width'] as number
+			const door = doors.value[activeDoorIndex.value]
+			const doorRes = calculateDoorScaleAndPos(vx, vy, anchorX.value, anchorY.value, door.angle, draggedDoorEnd.value)
+			door.x = doorRes['x'] as number
+			door.y = doorRes['y'] as number
+			door.width = doorRes['width'] as number
 			draw()
 		} else if (isDraggingCabinet.value) {
 			cabinetX.value = vx - dragStartOffsetX.value
@@ -467,21 +505,22 @@
 	const onTouchEnd = (e : TouchEvent) => {
 		emit('canvas-touchend', e)
 		if (!props.isClosed) return
-		if (isRotating.value && props.vertices.length >= 3) {
+		if (isRotating.value && activeDoorIndex.value >= 0 && activeDoorIndex.value < doors.value.length && props.vertices.length >= 3) {
+			const door = doors.value[activeDoorIndex.value]
 			const segments = generateWallSegments(props.vertices)
-			const snapRes = snapDoorToWall({ x: doorX.value, y: doorY.value } as Point, segments, 999999.0)
+			const snapRes = snapDoorToWall({ x: door.x, y: door.y } as Point, segments, 999999.0)
 			if (snapRes['isSnapped'] as boolean) {
-				doorX.value = snapRes['x'] as number
-				doorY.value = snapRes['y'] as number
-				
+				door.x = snapRes['x'] as number
+				door.y = snapRes['y'] as number
+
 				const wallAngle = snapRes['angle'] as number
-				const currentAngle = doorAngle.value
+				const currentAngle = door.angle
 				const diff1 = ((currentAngle - wallAngle + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
 				const diff2 = ((currentAngle - (wallAngle + Math.PI) + Math.PI * 3.0) % (Math.PI * 2.0)) - Math.PI
 				if (Math.abs(diff1) < Math.abs(diff2)) {
-					doorAngle.value = wallAngle
+					door.angle = wallAngle
 				} else {
-					doorAngle.value = wallAngle + Math.PI
+					door.angle = wallAngle + Math.PI
 				}
 				draw()
 			}
@@ -495,9 +534,37 @@
 		isScalingCabinet.value = false
 	}
 
+	const handleAddDoor = () => {
+		isDoorDeletedByUser.value = false
+		doors.value.push(createDefaultDoor())
+		activeObjectType.value = 'door'
+		activeDoorIndex.value = doors.value.length - 1
+		draw()
+	}
+
+	const handleDeleteActiveDoor = () => {
+		if (doors.value.length === 0) return
+
+		if (activeObjectType.value === 'door' && activeDoorIndex.value >= 0 && activeDoorIndex.value < doors.value.length) {
+			doors.value.splice(activeDoorIndex.value, 1)
+			activeObjectType.value = 'none'
+			activeDoorIndex.value = -1
+		} else {
+			doors.value.pop()
+			activeObjectType.value = 'none'
+			activeDoorIndex.value = -1
+		}
+
+		if (doors.value.length === 0) {
+			isDoorDeletedByUser.value = true
+		}
+		draw()
+	}
+
 	const exportImage = (callback : (path : string) => void) => {
 		if (activeObjectType.value !== 'none') {
 			activeObjectType.value = 'none'
+			activeDoorIndex.value = -1
 			draw()
 		}
 		const ctx = canvasCtx
@@ -541,10 +608,20 @@
 
 	const get3dData = () : Record<string, any> => {
 		const res = {} as Record<string, any>
-		res['doorX'] = doorX.value
-		res['doorY'] = doorY.value
-		res['doorAngle'] = doorAngle.value
-		res['doorWidth'] = doorWidth.value
+		res['doors'] = doors.value.map((d : Door) => {
+			const doorMap = {} as Record<string, any>
+			doorMap['x'] = d.x
+			doorMap['y'] = d.y
+			doorMap['angle'] = d.angle
+			doorMap['width'] = d.width
+			return doorMap
+		})
+		if (doors.value.length > 0) {
+			res['doorX'] = doors.value[0].x
+			res['doorY'] = doors.value[0].y
+			res['doorAngle'] = doors.value[0].angle
+			res['doorWidth'] = doors.value[0].width
+		}
 		res['cabinetX'] = cabinetX.value
 		res['cabinetY'] = cabinetY.value
 		res['cabinetAngle'] = cabinetAngle.value
@@ -560,12 +637,20 @@
 	defineExpose({
 		redraw: draw,
 		exportImage: exportImage,
-		get3dData: get3dData
+		get3dData: get3dData,
+		addDoor: handleAddDoor,
+		deleteActiveDoor: handleDeleteActiveDoor
 	})
 </script>
 
 <style scoped>
+	.canvas-wrapper {
+		width: 100%;
+		flex-direction: column;
+	}
+
 	.canvas-container {
+		position: relative;
 		width: 100%;
 		height: 300px;
 		justify-content: center;

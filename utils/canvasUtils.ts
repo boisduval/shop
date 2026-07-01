@@ -4,7 +4,7 @@ import { Record } from './types'
 
 // 颜色常量定义
 export const COLOR_CABINET = '#B57474'
-export const COLOR_DOOR = '#527EBF'
+export const COLOR_DOOR = '#3B82F6'
 export const COLOR_TEXT = '#64748B'
 export const COLOR_WALL_FILL = '#EAEAEA'
 export const COLOR_WALL_STROKE = '#8A8A8A'

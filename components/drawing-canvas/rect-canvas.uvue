@@ -103,6 +103,16 @@
 				return baseCanvasRef.value!.$callMethod('get3dData') as Record<string, any>
 			}
 			return null
+		},
+		addDoor: () => {
+			if (baseCanvasRef.value != null) {
+				baseCanvasRef.value!.$callMethod('addDoor')
+			}
+		},
+		deleteActiveDoor: () => {
+			if (baseCanvasRef.value != null) {
+				baseCanvasRef.value!.$callMethod('deleteActiveDoor')
+			}
 		}
 	})
 </script>

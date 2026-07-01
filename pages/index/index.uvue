@@ -34,11 +34,19 @@
 
 				<!-- 步骤 1：参数输入与配置区 -->
 				<view v-show="activeStep === 1" class="step-content">
-					<!-- 3D 预览通宽按钮 -->
-					<button class="btn-3d-preview" @tap="open3dPreview">
-						<image class="icon-3d" src="/static/3d-cube-white.svg"></image>
-						<text class="btn-3d-text">3D 预览</text>
-					</button>
+					<!-- 3D 预览与大门操作按钮行 -->
+					<view class="action-btn-row">
+						<button class="btn-action-item btn-3d" @tap="open3dPreview">
+							<image class="icon-3d" src="/static/3d-cube-white.svg"></image>
+							<text class="btn-action-text">3D 预览</text>
+						</button>
+						<button class="btn-action-item btn-add-door" @tap="handleAddDoor">
+							<text class="btn-action-text">新增大门</text>
+						</button>
+						<button class="btn-action-item btn-delete-door" @tap="handleDeleteDoor">
+							<text class="btn-action-text">删除大门</text>
+						</button>
+					</view>
 					<view class="selector-wrapper">
 						<room-shape-selector v-model="selectedShape"></room-shape-selector>
 					</view>
@@ -125,6 +133,36 @@
 				title: '画布未准备好',
 				icon: 'none'
 			})
+		}
+	}
+
+	const handleAddDoor = () => {
+		let activeCanvasRef : any = null
+		if (selectedShape.value === 'rect') {
+			activeCanvasRef = rectCanvasRef.value
+		} else if (selectedShape.value === 'trap') {
+			activeCanvasRef = trapCanvasRef.value
+		} else if (selectedShape.value === 'free') {
+			activeCanvasRef = freeCanvasRef.value
+		}
+
+		if (activeCanvasRef != null) {
+			activeCanvasRef.$callMethod('addDoor')
+		}
+	}
+
+	const handleDeleteDoor = () => {
+		let activeCanvasRef : any = null
+		if (selectedShape.value === 'rect') {
+			activeCanvasRef = rectCanvasRef.value
+		} else if (selectedShape.value === 'trap') {
+			activeCanvasRef = trapCanvasRef.value
+		} else if (selectedShape.value === 'free') {
+			activeCanvasRef = freeCanvasRef.value
+		}
+
+		if (activeCanvasRef != null) {
+			activeCanvasRef.$callMethod('deleteActiveDoor')
 		}
 	}
 
@@ -332,6 +370,50 @@
 	}
 
 	.btn-3d-text {
+		color: #ffffff;
+		font-weight: bold;
+		font-size: 12px;
+	}
+
+	.action-btn-row {
+		flex-direction: row;
+		width: 100%;
+		margin: 0 0 16px;
+		gap: 8px;
+	}
+
+	.btn-action-item {
+		flex: 1;
+		height: 40px;
+		border: none;
+		border-radius: 12px;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.05);
+	}
+
+	.btn-action-item:active {
+		transform: scale(0.95);
+	}
+
+	.btn-3d {
+		background-image: linear-gradient(90deg, #3b82f6 0%, #4f46e5 100%);
+		box-shadow: 0 4px 10px 0 rgba(59, 130, 246, 0.2);
+	}
+
+	.btn-add-door {
+		background-image: linear-gradient(90deg, #10b981 0%, #059669 100%);
+		box-shadow: 0 4px 10px 0 rgba(16, 185, 129, 0.2);
+	}
+
+	.btn-delete-door {
+		background-image: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+		box-shadow: 0 4px 10px 0 rgba(239, 68, 68, 0.2);
+	}
+
+	.btn-action-text {
 		color: #ffffff;
 		font-weight: bold;
 		font-size: 12px;
