@@ -54,7 +54,7 @@
 		width: 48%;
 		height: 96px;
 		padding: 12px 20px;
-		margin-bottom: 24px;
+		margin-bottom: 16px;
 		justify-content: space-between;
 		border-radius: 12px;
 		transition: all 0.3s;

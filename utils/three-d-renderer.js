@@ -404,8 +404,11 @@ function placeDoor(scene, door, centerX, centerY, scale) {
 }
 
 // Place Cabinet (High-fidelity procedural shelves)
-function placeCabinet(scene, cabinet, centerX, centerY, scale) {
-  if (!cabinet || cabinet.x === undefined || cabinet.y === undefined) return;
+function placeCabinet(scene, cabinet, centerX, centerY, scale, onLoadComplete) {
+  if (!cabinet || cabinet.x === undefined || cabinet.y === undefined) {
+    if (onLoadComplete) onLoadComplete('success');
+    return;
+  }
 
   const cabXM = (cabinet.x - centerX) / scale;
   const cabZM = (cabinet.y - centerY) / scale;
@@ -468,6 +471,9 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale) {
         });
 
         cabinetGroup.add(model);
+        if (onLoadComplete) {
+          onLoadComplete('success');
+        }
       },
       undefined,
       (err) => {
@@ -475,20 +481,29 @@ function placeCabinet(scene, cabinet, centerX, centerY, scale) {
           "placeCabinet: Failed to load GLTF model. Error details:",
           err,
         );
+        if (onLoadComplete) {
+          onLoadComplete('error');
+        }
       },
     );
   } else {
     console.error(
       "placeCabinet: THREE.GLTFLoader is NOT a function! Check if registerGLTFLoader(THREE) succeeded.",
     );
+    if (onLoadComplete) {
+      onLoadComplete('error');
+    }
   }
 
   scene.add(cabinetGroup);
 }
 
 // Main Setup Export
-export function createThreeScene(canvas, data, baseUrl) {
+export function createThreeScene(canvas, data, baseUrl, onLoadStateChange) {
   console.log("createThreeScene - received baseUrl:", baseUrl);
+  if (onLoadStateChange) {
+    onLoadStateChange('loading');
+  }
   appBaseUrl = baseUrl || "";
   // Initialize scoped THREE instance using mini program package
   THREE = createScopedThreejs(canvas);
@@ -607,7 +622,15 @@ export function createThreeScene(canvas, data, baseUrl) {
             cabinetStyle: data.cabinetStyle,
           }
         : null;
-    placeCabinet(scene, cabinetData, centerX, centerY, SCALE_FACTOR);
+    placeCabinet(scene, cabinetData, centerX, centerY, SCALE_FACTOR, (status) => {
+      if (onLoadStateChange) {
+        onLoadStateChange(status);
+      }
+    });
+  } else {
+    if (onLoadStateChange) {
+      onLoadStateChange('success');
+    }
   }
 
   // Start anim loop

@@ -19,6 +19,17 @@
 				<canvas type="webgl" id="three-canvas" class="three-canvas" @touchstart="onTouchStartEvent"
 					@touchmove="onTouchMoveEvent" @touchend="onTouchEndEvent"></canvas>
 
+				<!-- 加载动画与重试遮罩层 (使用 cover-view 避免被 WebGL canvas 遮挡) -->
+				<cover-view v-if="loadingStatus === 'loading'" class="loading-overlay">
+					<cover-image class="loading-gif" src="/static/loading.gif"></cover-image>
+					<cover-view class="loading-text">加载 3D 模型中...</cover-view>
+				</cover-view>
+
+				<cover-view v-if="loadingStatus === 'error'" class="loading-overlay" @tap="retryLoad">
+					<cover-view class="error-icon">⚠</cover-view>
+					<cover-view class="loading-text">加载失败，轻触重试</cover-view>
+				</cover-view>
+
 
 				<!-- 左下角操作提示 (浮动 HUD, 使用 cover-view) -->
 				<cover-view class="instruction-container pointer-events-none">
@@ -50,7 +61,7 @@
 </template>
 
 <script setup lang="uts">
-	import { getCurrentInstance, onMounted, onUnmounted, PropType } from 'vue'
+	import { getCurrentInstance, onMounted, onUnmounted, PropType, ref } from 'vue'
 	import { Record } from '../../utils/types'
 	// @ts-ignore
 	import { createThreeScene, destroyThreeScene, onTouchStart, onTouchMove, onTouchEnd } from '../../utils/three-d-renderer.js'
@@ -69,21 +80,35 @@
 	let activeCamera : any = null
 	let activeRenderer : any = null
 	let activeScene : any = null
+	let savedCanvas : any = null
+	const loadingStatus = ref('loading')
 
 	const initCanvas = (canvas : any) => {
+		savedCanvas = canvas
+		loadingStatus.value = 'loading'
 		let baseUrl = '';
 		// #ifdef H5 || MP-WEIXIN
 		if (typeof window !== 'undefined' && window.location && window.location.origin) {
 			baseUrl = window.location.origin;
 		}
 		// #endif
-		const threeObj = createThreeScene(canvas, props.roomData, baseUrl)
+		const threeObj = createThreeScene(canvas, props.roomData, baseUrl, (status : string) => {
+			loadingStatus.value = status
+		})
 		if (threeObj != null) {
 			activeCamera = threeObj['camera']
 			activeRenderer = threeObj['renderer']
 			activeScene = threeObj['scene']
 		}
 	}
+
+	const retryLoad = () => {
+		if (savedCanvas != null) {
+			destroyThreeScene()
+			initCanvas(savedCanvas)
+		}
+	}
+
 
 	onMounted(() => {
 		// #ifdef MP-WEIXIN || H5
@@ -287,5 +312,36 @@
 
 	.mr-3 {
 		margin-right: 12px;
+	}
+
+	.loading-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(248, 250, 252, 0.9);
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		z-index: 99;
+	}
+
+	.loading-gif {
+		width: 56px;
+		height: 56px;
+	}
+
+	.loading-text {
+		font-size: 13px;
+		color: #64748b;
+		margin-top: 12px;
+		font-weight: 500;
+	}
+
+	.error-icon {
+		font-size: 28px;
+		color: #ef4444;
 	}
 </style>
