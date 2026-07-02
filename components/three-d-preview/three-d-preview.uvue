@@ -51,7 +51,7 @@
 						<cover-view class="legend-text">大门</cover-view>
 					</cover-view>
 					<cover-view class="legend-item">
-						<cover-image src="/static/fYCbXMFM4.png" class="legend-icon" mode="aspectFill"></cover-image>
+						<cover-image :src="roomData.cabinetStyle === 'l_shape_mirror' ? '/static/shelf-lm.png' : '/static/fYCbXMFM4.png'" class="legend-icon" mode="aspectFill"></cover-image>
 						<cover-view class="legend-text">烟柜</cover-view>
 					</cover-view>
 				</cover-view>
