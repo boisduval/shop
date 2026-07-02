@@ -664,6 +664,9 @@
 		border: 1px solid transparent;
 		transition: all 0.2s;
 	}
+	.btn::after {
+		border: none;
+	}
 
 	.btn:active {
 		transform: scale(0.95);
