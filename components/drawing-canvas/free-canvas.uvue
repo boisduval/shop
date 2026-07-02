@@ -263,7 +263,7 @@
 									title: '修改边长',
 									placeholderText: '请输入新边长(m)',
 									editable: true,
-									content: curLenM.toFixed(1),
+									content: curLenM.toFixed(2),
 									success: (res) => {
 										if (res.confirm && res.content != null) {
 											const valM = parseFloat(res.content!)
@@ -526,7 +526,7 @@
 				
 				const distVirtual = Math.sqrt((p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y))
 				const lengthMeters = distVirtual / SCALE
-				drawSegmentLabel(ctx, `${lengthMeters.toFixed(1)}m`, midX, midY)
+				drawSegmentLabel(ctx, `${lengthMeters.toFixed(2)}m`, midX, midY)
 			}
 
 			// Length of the active guide line
@@ -544,7 +544,7 @@
 				
 				const distVirtual = Math.sqrt((cur.x - lastPt.x) * (cur.x - lastPt.x) + (cur.y - lastPt.y) * (cur.y - lastPt.y))
 				const lengthMeters = distVirtual / SCALE
-				drawSegmentLabel(ctx, `${lengthMeters.toFixed(1)}m`, midX, midY)
+				drawSegmentLabel(ctx, `${lengthMeters.toFixed(2)}m`, midX, midY)
 			}
 		}
 
