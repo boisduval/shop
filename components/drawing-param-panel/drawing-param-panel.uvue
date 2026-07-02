@@ -5,14 +5,14 @@
 			<view class="form-cell">
 				<text class="form-cell-label">长度 (m)</text>
 				<view class="form-cell-input-wrapper">
-					<input class="form-cell-input" type="number" :value="modelValue['rectW']"
+					<input class="form-cell-input" type="digit" :value="modelValue['rectW']"
 						@input="e => onInput('rectW', e)" placeholder="请输入长度" />
 				</view>
 			</view>
 			<view class="form-cell form-cell-no-border">
 				<text class="form-cell-label">宽度 (m)</text>
 				<view class="form-cell-input-wrapper">
-					<input class="form-cell-input" type="number" :value="modelValue['rectH']"
+					<input class="form-cell-input" type="digit" :value="modelValue['rectH']"
 						@input="e => onInput('rectH', e)" placeholder="请输入宽度" />
 				</view>
 			</view>
@@ -32,21 +32,21 @@
 				<view class="form-cell">
 					<text class="form-cell-label">上边长 (m)</text>
 					<view class="form-cell-input-wrapper">
-						<input class="form-cell-input" type="number" :value="modelValue['trapTop']"
+						<input class="form-cell-input" type="digit" :value="modelValue['trapTop']"
 							@input="e => onInput('trapTop', e)" placeholder="请输入上边长" />
 					</view>
 				</view>
 				<view class="form-cell">
 					<text class="form-cell-label">下边长 (m)</text>
 					<view class="form-cell-input-wrapper">
-						<input class="form-cell-input" type="number" :value="modelValue['trapBottom']"
+						<input class="form-cell-input" type="digit" :value="modelValue['trapBottom']"
 							@input="e => onInput('trapBottom', e)" placeholder="请输入下边长" />
 					</view>
 				</view>
 				<view class="form-cell form-cell-no-border">
 					<text class="form-cell-label">高度 (m)</text>
 					<view class="form-cell-input-wrapper">
-						<input class="form-cell-input" type="number" :value="modelValue['trapH']"
+						<input class="form-cell-input" type="digit" :value="modelValue['trapH']"
 							@input="e => onInput('trapH', e)" placeholder="请输入高度" />
 					</view>
 				</view>
