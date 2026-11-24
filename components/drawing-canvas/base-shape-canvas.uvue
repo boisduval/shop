@@ -9,7 +9,7 @@
 
 <script setup lang="uts">
 	import { ref, watch, PropType, getCurrentInstance, onMounted } from 'vue'
-	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, drawLegends, COLOR_CABINET } from '../../utils/canvasUtils'
+	import { Point, generateWallSegments, snapDoorToWall, drawDoor, drawCabinet, getDoorInitialPosition, drawLegends, COLOR_CABINET, COLOR_WAREHOUSE } from '../../utils/canvasUtils'
 	import { getDoorRotationHandlePos, calculateDoorScaleAndPos, calculateCabinetScaleAndPos } from '../../utils/controlUtils'
 
 	export interface Door {
@@ -96,10 +96,20 @@
 	const isScalingCabinet = ref(false)
 	const isCabinetInitialized = ref(false)
 
+	// 仓库交互状态 (复用烟柜交互模型)
+	const warehouseX = ref(150.0)
+	const warehouseY = ref(150.0)
+	const warehouseAngle = ref(0.0)
+	const warehouseScale = ref(1.0)
+	const isDraggingWarehouse = ref(false)
+	const isRotatingWarehouse = ref(false)
+	const isScalingWarehouse = ref(false)
+	const isWarehouseInitialized = ref(false)
+
 	const dragStartOffsetX = ref(0.0)
 	const dragStartOffsetY = ref(0.0)
 
-	// 选中/激活的对象类型 ('none' | 'door' | 'cabinet')
+	// 选中/激活的对象类型 ('none' | 'door' | 'cabinet' | 'warehouse')
 	const activeObjectType = ref('none')
 
 	// 缩放定位锚点
@@ -128,6 +138,9 @@
 				if (!isCabinetInitialized.value) {
 					initCabinet()
 				}
+				if (!isWarehouseInitialized.value) {
+					initWarehouse()
+				}
 				draw()
 			}
 		})
@@ -152,6 +165,27 @@
 		cabinetScale.value = Math.max(1.0, 1.0 / safeZoom)
 		cabinetAngle.value = 0.0
 		isCabinetInitialized.value = true
+	}
+
+	const initWarehouse = () => {
+		const safeZoom = Math.max(0.01, props.zoom)
+		if (props.vertices.length > 0) {
+			let maxX = props.vertices[0].x
+			let minY = props.vertices[0].y
+			for (let i = 1; i < props.vertices.length; i++) {
+				const pt = props.vertices[i]
+				if (pt.x > maxX) maxX = pt.x
+				if (pt.y < minY) minY = pt.y
+			}
+			warehouseX.value = maxX - 35.0 / safeZoom
+			warehouseY.value = minY + 30.0 / safeZoom
+		} else {
+			warehouseX.value = 200.0
+			warehouseY.value = 100.0
+		}
+		warehouseScale.value = Math.max(1.0, 1.0 / safeZoom)
+		warehouseAngle.value = 0.0
+		isWarehouseInitialized.value = true
 	}
 
 	const createDefaultDoor = () : Door => {
@@ -224,12 +258,14 @@
 		if (!newVal) {
 			doors.value = []
 			isCabinetInitialized.value = false
+			isWarehouseInitialized.value = false
 			activeObjectType.value = 'none'
 			activeDoorIndex.value = -1
 		} else {
 			if (props.vertices.length >= 3) {
 				isDoorDeletedByUser.value = false
 				initCabinet()
+				initWarehouse()
 				initFirstDoor()
 			}
 		}
@@ -265,6 +301,22 @@
 					isRotatingCabinet.value,
 					cabinetScale.value * props.zoom,
 					activeObjectType.value === 'cabinet'
+				)
+			}
+
+			if (isWarehouseInitialized.value) {
+				drawCabinet(
+					ctx,
+					warehouseX.value * props.zoom + props.panX,
+					warehouseY.value * props.zoom + props.panY,
+					warehouseAngle.value,
+					'default',
+					COLOR_WAREHOUSE,
+					isDraggingWarehouse.value,
+					isRotatingWarehouse.value,
+					warehouseScale.value * props.zoom,
+					activeObjectType.value === 'warehouse',
+					'仓库'
 				)
 			}
 
@@ -343,42 +395,48 @@
 			}
 		}
 
-		// 2. 如果烟柜已选中，检测其特有的控制（旋转、四角等比缩放、拉手移动）
-		if (activeObjectType.value === 'cabinet' && isCabinetInitialized.value) {
-			const cAngle = cabinetAngle.value
-			const cs = cabinetScale.value
+		// 2. 如果烟柜或仓库已选中，检测其特有的控制（旋转、四角等比缩放、拉手移动）
+		if ((activeObjectType.value === 'cabinet' && isCabinetInitialized.value) || (activeObjectType.value === 'warehouse' && isWarehouseInitialized.value)) {
+			const isCab = activeObjectType.value === 'cabinet'
+			const oX = isCab ? cabinetX.value : warehouseX.value
+			const oY = isCab ? cabinetY.value : warehouseY.value
+			const oAngle = isCab ? cabinetAngle.value : warehouseAngle.value
+			const os = isCab ? cabinetScale.value : warehouseScale.value
 
-			const cDragX = cabinetX.value - 30.0 * cs * Math.sin(cAngle)
-			const cDragY = cabinetY.value + 30.0 * cs * Math.cos(cAngle)
-			const cRotX = cabinetX.value + 30.0 * cs * Math.sin(cAngle)
-			const cRotY = cabinetY.value - 30.0 * cs * Math.cos(cAngle)
+			const cDragX = oX - 30.0 * os * Math.sin(oAngle)
+			const cDragY = oY + 30.0 * os * Math.cos(oAngle)
+			const cRotX = oX + 30.0 * os * Math.sin(oAngle)
+			const cRotY = oY - 30.0 * os * Math.cos(oAngle)
 
 			const distCabinetMove = Math.sqrt((vx - cDragX) * (vx - cDragX) + (vy - cDragY) * (vy - cDragY))
 			const distCabinetRotate = Math.sqrt((vx - cRotX) * (vx - cRotX) + (vy - cRotY) * (vy - cRotY))
 
 			if (distCabinetRotate < 25 / props.zoom) {
-				isRotatingCabinet.value = true
+				if (isCab) isRotatingCabinet.value = true
+				else isRotatingWarehouse.value = true
 				return
 			} else if (distCabinetMove < 25 / props.zoom) {
-				isDraggingCabinet.value = true
-				dragStartOffsetX.value = vx - cabinetX.value
-				dragStartOffsetY.value = vy - cabinetY.value
+				if (isCab) isDraggingCabinet.value = true
+				else isDraggingWarehouse.value = true
+				dragStartOffsetX.value = vx - oX
+				dragStartOffsetY.value = vy - oY
 				return
 			}
 
 			// 检查 4 个角上的小正方形手柄
-			const clx = [-22.5 * cs, 22.5 * cs, 22.5 * cs, -22.5 * cs]
-			const cly = [-15 * cs, -15 * cs, 15 * cs, 15 * cs]
+			const clx = [-22.5 * os, 22.5 * os, 22.5 * os, -22.5 * os]
+			const cly = [-15 * os, -15 * os, 15 * os, 15 * os]
 			for (let i = 0; i < 4; i++) {
-				const cgx = cabinetX.value + clx[i] * Math.cos(cAngle) - cly[i] * Math.sin(cAngle)
-				const cgy = cabinetY.value + clx[i] * Math.sin(cAngle) + cly[i] * Math.cos(cAngle)
+				const cgx = oX + clx[i] * Math.cos(oAngle) - cly[i] * Math.sin(oAngle)
+				const cgy = oY + clx[i] * Math.sin(oAngle) + cly[i] * Math.cos(oAngle)
 				const distCorner = Math.sqrt((vx - cgx) * (vx - cgx) + (vy - cgy) * (vy - cgy))
 				if (distCorner < 20 / props.zoom) {
-					isScalingCabinet.value = true
+					if (isCab) isScalingCabinet.value = true
+					else isScalingWarehouse.value = true
 					draggedCornerIndex.value = i
 					const oppIdx = (i + 2) % 4
-					anchorX.value = cabinetX.value + clx[oppIdx] * Math.cos(cAngle) - cly[oppIdx] * Math.sin(cAngle)
-					anchorY.value = cabinetY.value + clx[oppIdx] * Math.sin(cAngle) + cly[oppIdx] * Math.cos(cAngle)
+					anchorX.value = oX + clx[oppIdx] * Math.cos(oAngle) - cly[oppIdx] * Math.sin(oAngle)
+					anchorY.value = oY + clx[oppIdx] * Math.sin(oAngle) + cly[oppIdx] * Math.cos(oAngle)
 					return
 				}
 			}
@@ -404,6 +462,18 @@
 				isDraggingCabinet.value = true
 				dragStartOffsetX.value = vx - cabinetX.value
 				dragStartOffsetY.value = vy - cabinetY.value
+				draw()
+				return
+			}
+		}
+
+		if (isWarehouseInitialized.value) {
+			const distWarehouseBody = Math.sqrt((vx - warehouseX.value) * (vx - warehouseX.value) + (vy - warehouseY.value) * (vy - warehouseY.value))
+			if (distWarehouseBody < 30.0 / props.zoom) {
+				activeObjectType.value = 'warehouse'
+				isDraggingWarehouse.value = true
+				dragStartOffsetX.value = vx - warehouseX.value
+				dragStartOffsetY.value = vy - warehouseY.value
 				draw()
 				return
 			}
@@ -505,6 +575,22 @@
 			cabinetY.value = cabRes['y'] as number
 			cabinetScale.value = cabRes['scale'] as number
 			draw()
+		} else if (isDraggingWarehouse.value) {
+			warehouseX.value = vx - dragStartOffsetX.value
+			warehouseY.value = vy - dragStartOffsetY.value
+			draw()
+		} else if (isRotatingWarehouse.value) {
+			const dx = vx - warehouseX.value
+			const dy = vy - warehouseY.value
+			const rawAngle = Math.atan2(dy, dx) + Math.PI / 2
+			warehouseAngle.value = rawAngle
+			draw()
+		} else if (isScalingWarehouse.value) {
+			const cabRes = calculateCabinetScaleAndPos(vx, vy, anchorX.value, anchorY.value, warehouseAngle.value, draggedCornerIndex.value, 'default')
+			warehouseX.value = cabRes['x'] as number
+			warehouseY.value = cabRes['y'] as number
+			warehouseScale.value = cabRes['scale'] as number
+			draw()
 		}
 	}
 
@@ -538,6 +624,9 @@
 		isDraggingCabinet.value = false
 		isRotatingCabinet.value = false
 		isScalingCabinet.value = false
+		isDraggingWarehouse.value = false
+		isRotatingWarehouse.value = false
+		isScalingWarehouse.value = false
 	}
 
 	const handleAddDoor = () => {

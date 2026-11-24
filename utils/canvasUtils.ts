@@ -4,6 +4,7 @@ import { Record } from './types'
 
 // 颜色常量定义
 export const COLOR_CABINET = '#B57474'
+export const COLOR_WAREHOUSE = '#F59E0B'
 export const COLOR_DOOR = '#3B82F6'
 export const COLOR_TEXT = '#64748B'
 export const COLOR_WALL_FILL = '#EAEAEA'
@@ -148,7 +149,8 @@ export function drawCabinet(
 	isDragging: boolean,
 	isRotating: boolean,
 	scale: number,
-	isActive: boolean
+	isActive: boolean,
+	labelText: string = '烟柜'
 ) {
 	ctx.save()
 	ctx.translate(cabX, cabY)
@@ -188,9 +190,9 @@ export function drawCabinet(
 	ctx.shadowOffsetX = 1
 	ctx.shadowOffsetY = 1
 	if (type === 'l_shape' || type === 'l_shape_mirror') {
-		ctx.fillText('烟柜', 0, -7.5 * scale)
+		ctx.fillText(labelText, 0, -7.5 * scale)
 	} else {
-		ctx.fillText('烟柜', 0, 0)
+		ctx.fillText(labelText, 0, 0)
 	}
 	// 重置阴影，避免影响后续绘制的控制按钮/手柄
 	ctx.shadowColor = 'transparent'
@@ -492,6 +494,15 @@ export function drawLegends(
 
 	ctx.fillStyle = COLOR_TEXT
 	ctx.fillText('大门', 90, height - 20)
+
+	// 仓库图例 (暖琥珀色 COLOR_WAREHOUSE)
+	ctx.fillStyle = COLOR_WAREHOUSE
+	ctx.beginPath()
+	ctx.arc(140, height - 20, 4, 0, Math.PI * 2)
+	ctx.fill()
+
+	ctx.fillStyle = COLOR_TEXT
+	ctx.fillText('仓库', 150, height - 20)
 
 	ctx.restore()
 }
